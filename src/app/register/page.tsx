@@ -86,7 +86,7 @@ export default function RegisterPage() {
             <span className="text-4xl font-bold text-white">S</span>
           </div>
           <h1 className="text-headline mb-3 text-text-dark">
-            스텝업 회원가입
+            스펙체크 회원가입
           </h1>
           <p className="text-body-1 text-text-gray">
             목표를 향한 첫 걸음을 시작하세요

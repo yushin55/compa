@@ -90,6 +90,7 @@ export interface JobRequirement {
   description: string;
   category?: string;
   importance?: 'required' | 'preferred';
+  priority?: 'required' | 'preferred'; // 로컬 데이터 호환성
 }
 
 export interface JobPosting {

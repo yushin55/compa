@@ -51,7 +51,7 @@ export default function LoginPage() {
             <span className="text-4xl font-bold text-white">S</span>
           </div>
           <h1 className="text-headline mb-3 text-text-dark">
-            스텝업
+            스펙체크
           </h1>
           <p className="text-body-1 text-text-gray">
             목표를 향한 가장 스마트한 발걸음

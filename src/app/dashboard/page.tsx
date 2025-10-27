@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState<string | null>(null);
+  const [showDetailedScores, setShowDetailedScores] = useState(false);
 
   useEffect(() => {
     if (!getUserId()) {
@@ -68,15 +69,52 @@ export default function DashboardPage() {
   }
 
   const categories = [
-    { name: '학력', score: data.radar_scores.education, key: 'education' },
-    { name: '어학', score: data.radar_scores.language, key: 'language' },
-    { name: '자격증', score: data.radar_scores.certificate, key: 'certificate' },
-    { name: '프로젝트', score: data.radar_scores.project, key: 'project' },
-    { name: '대외활동', score: data.radar_scores.activity, key: 'activity' },
+    { name: '전공', score: data.radar_scores.education, key: 'education', color: 'from-blue-500 to-blue-600' },
+    { name: '자격증', score: data.radar_scores.certificate, key: 'certificate', color: 'from-purple-500 to-purple-600' },
+    { name: '어학', score: data.radar_scores.language, key: 'language', color: 'from-green-500 to-green-600' },
+    { name: '공모전', score: 5.5, key: 'contest', color: 'from-yellow-500 to-yellow-600' }, // 임시 데이터
+    { name: '프로젝트', score: data.radar_scores.project, key: 'project', color: 'from-red-500 to-red-600' },
+    { name: '대외활동', score: data.radar_scores.activity, key: 'activity', color: 'from-pink-500 to-pink-600' },
   ];
+
+  // 6각형용 (대외활동 제외 - 처음 6개만)
+  const hexagonCategories = categories.slice(0, 6);
 
   const totalScore = categories.reduce((sum, cat) => sum + cat.score, 0);
   const avgScore = totalScore / categories.length;
+
+  // 6각형 레이더 차트 포인트 계산
+  const getRadarPoints = () => {
+    const centerX = 200;
+    const centerY = 200;
+    const maxRadius = 180;
+    
+    return hexagonCategories.map((cat, index) => {
+      const angle = (Math.PI * 2 * index) / hexagonCategories.length - Math.PI / 2;
+      const radius = (cat.score / 10) * maxRadius;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      return { x, y, angle, cat };
+    });
+  };
+
+  const radarPoints = getRadarPoints();
+  const radarPathData = radarPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+  
+  // 배경 육각형들 (10, 8, 6, 4, 2점 레벨)
+  const getBackgroundHexagon = (level: number) => {
+    const centerX = 200;
+    const centerY = 200;
+    const maxRadius = 180;
+    const radius = (level / 10) * maxRadius;
+    
+    return hexagonCategories.map((cat, index) => {
+      const angle = (Math.PI * 2 * index) / hexagonCategories.length - Math.PI / 2;
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+      return { x, y };
+    }).map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
+  };
 
   return (
     <>
@@ -84,57 +122,373 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-white">
         {/* 헤더 */}
         <div className="border-b border-border-color">
-          <div className="max-w-5xl mx-auto px-8 py-12">
-            <h1 className="text-display-2 mb-3 text-text-dark">내 스펙</h1>
-            <p className="text-body-1 text-text-gray">
+          <div className="max-w-[1600px] mx-auto px-6 py-8">
+            <h1 className="text-3xl mb-2 text-text-dark font-bold">스펙체크</h1>
+            <p className="text-sm text-text-gray">
               현재 보유한 역량을 확인하고 강점을 파악하세요
             </p>
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-8 py-12">
-          {/* 전체 요약 */}
-          <div className="bg-bg-light rounded-2xl p-8 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-title-1 font-bold text-text-dark">전체 역량 점수</h2>
-              <div className="text-display-2 font-bold text-primary">
-                {avgScore.toFixed(1)}<span className="text-title-2 text-text-gray">/10</span>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-5 gap-4">
-              {categories.map((cat) => {
-                const level = getScoreLevel(cat.score);
-                return (
-                  <div key={cat.key} className="text-center">
-                    <div className={`w-full h-24 rounded-xl mb-2 transition-all ${level.color} flex items-end justify-center pb-2 relative overflow-hidden`}>
-                      <div 
-                        className="absolute bottom-0 left-0 right-0 bg-current opacity-20 transition-all"
-                        style={{ height: `${(cat.score / 10) * 100}%` }}
-                      />
-                      <span className="relative text-title-1 font-bold">{cat.score}</span>
+        <div className="max-w-[1600px] mx-auto px-6 py-8">
+          {/* 전체 요약 - 6각형 레이더 차트 또는 7개 원형 그래프 */}
+          <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-6 mb-8">
+            {!showDetailedScores ? (
+              // 6각형 레이더 차트 뷰
+              <>
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-text-dark mb-2">
+                    나의 역량 분석
+                  </h2>
+                  <p className="text-sm text-text-gray">
+                    6개 핵심 분야의 역량을 한눈에 확인하세요
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8 items-center">
+                  {/* 레이더 차트 */}
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <svg width="380" height="380" viewBox="0 0 400 400" className="drop-shadow-lg">
+                        {/* 배경 육각형들 */}
+                        {[10, 8, 6, 4, 2].map((level) => (
+                          <path
+                            key={level}
+                            d={getBackgroundHexagon(level)}
+                            fill="none"
+                            stroke="#9ca3af"
+                            strokeWidth="2"
+                            opacity={level === 10 ? 0.8 : 0.6}
+                          />
+                        ))}
+                        
+                        {/* 축선 */}
+                        {radarPoints.map((point, index) => (
+                          <line
+                            key={index}
+                            x1="200"
+                            y1="200"
+                            x2={200 + 180 * Math.cos(point.angle)}
+                            y2={200 + 180 * Math.sin(point.angle)}
+                            stroke="#e5e7eb"
+                            strokeWidth="1"
+                            strokeDasharray="4,4"
+                          />
+                        ))}
+
+                        {/* 실제 데이터 영역 */}
+                        <path
+                          d={radarPathData}
+                          fill="url(#radarGradient)"
+                          fillOpacity="0.5"
+                          stroke="#60a5fa"
+                          strokeWidth="3"
+                          strokeLinejoin="round"
+                        />
+
+                        {/* 데이터 포인트 */}
+                        {radarPoints.map((point, index) => (
+                          <g key={index}>
+                            <circle
+                              cx={point.x}
+                              cy={point.y}
+                              r="7"
+                              fill="white"
+                              stroke="#1e40af"
+                              strokeWidth="3"
+                            />
+                          </g>
+                        ))}
+
+                        {/* 그라디언트 정의 */}
+                        <defs>
+                          <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#8b5cf6" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+
+                      {/* 라벨 */}
+                      <div className="absolute inset-0">
+                        {radarPoints.map((point, index) => {
+                          const labelRadius = 210;
+                          const labelX = 200 + labelRadius * Math.cos(point.angle);
+                          const labelY = 200 + labelRadius * Math.sin(point.angle);
+                          
+                          return (
+                            <div
+                              key={index}
+                              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                              style={{
+                                left: `${labelX}px`,
+                                top: `${labelY}px`,
+                              }}
+                            >
+                              <div className="bg-white px-3 py-2 rounded-lg shadow-md border-2 border-primary">
+                                <div className="text-sm font-bold text-text-dark text-center whitespace-nowrap">
+                                  {point.cat.name}
+                                </div>
+                                <div className="text-xs text-primary text-center font-semibold">
+                                  {point.cat.score.toFixed(1)}점
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="text-sm font-medium text-text-dark">{cat.name}</div>
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* 점수 리스트 */}
+                  <div className="space-y-3">
+                    {hexagonCategories.map((cat) => {
+                      const percentage = (cat.score / 10) * 100;
+                      const level = getScoreLevel(cat.score);
+                      
+                      return (
+                        <div key={cat.key} className="bg-white rounded-xl p-4 shadow-md hover:shadow-lg transition-all">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2.5">
+                              <h3 className="text-base font-bold text-text-dark">{cat.name}</h3>
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${level.color}`}>
+                                {level.label}
+                              </span>
+                            </div>
+                            <div className="text-xl font-bold text-primary">
+                              {cat.score.toFixed(1)}
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-full bg-gradient-to-r ${cat.color} rounded-full transition-all duration-1000`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* 평균 점수 */}
+                    <div className="bg-gradient-to-r from-primary to-blue-500 rounded-xl p-4 shadow-lg text-white mt-5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-semibold opacity-90 mb-1">평균 점수</div>
+                          <div className="text-2xl font-bold">
+                            {(hexagonCategories.reduce((sum, cat) => sum + cat.score, 0) / hexagonCategories.length).toFixed(1)}
+                          </div>
+                        </div>
+                        <div className="text-xs opacity-90">/ 10점</div>
+                      </div>
+                    </div>
+
+                    {/* 자세히 보기 버튼 */}
+                    <button
+                      onClick={() => setShowDetailedScores(true)}
+                      className="w-full mt-5 bg-white text-primary font-bold py-3 rounded-xl hover:bg-gray-50 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      7개 분야 상세 점수 보기
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // 7개 원형 그래프 상세 뷰
+              <>
+                <div className="text-center mb-8">
+                  <button
+                    onClick={() => setShowDetailedScores(false)}
+                    className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark mb-3 font-semibold text-sm"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    레이더 차트로 돌아가기
+                  </button>
+                  <h2 className="text-2xl font-bold text-text-dark mb-2">
+                    타이틀을 입력하세요
+                  </h2>
+                  <p className="text-sm text-text-gray">
+                    7개 분야별로 나의 스펙을 확인하고 부족한 부분을 채워나가세요
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+                  {categories.map((spec, index) => {
+                    const percentage = (spec.score / 10) * 100;
+                    const circumference = 2 * Math.PI * 90;
+                    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+                    return (
+                      <div
+                        key={spec.key}
+                        className="group relative bg-white rounded-xl p-5 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                      >
+                        {/* 원형 그래프 */}
+                        <div className="relative w-40 h-40 mx-auto mb-5">
+                          <svg className="transform -rotate-90 w-full h-full" viewBox="0 0 200 200">
+                            {/* 배경 원 */}
+                            <circle
+                              cx="100"
+                              cy="100"
+                              r="90"
+                              stroke="#e5e7eb"
+                              strokeWidth="12"
+                              fill="none"
+                            />
+                            {/* 진행률 원 */}
+                            <circle
+                              cx="100"
+                              cy="100"
+                              r="90"
+                              stroke={`url(#gradient-${index})`}
+                              strokeWidth="12"
+                              fill="none"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={strokeDashoffset}
+                              strokeLinecap="round"
+                              className="transition-all duration-1000 ease-out"
+                            />
+                            {/* 그라디언트 정의 */}
+                            <defs>
+                              <linearGradient id={`gradient-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor={spec.color.includes('blue') ? '#3b82f6' : 
+                                                             spec.color.includes('purple') ? '#a855f7' :
+                                                             spec.color.includes('green') ? '#22c55e' :
+                                                             spec.color.includes('yellow') ? '#eab308' :
+                                                             spec.color.includes('red') ? '#ef4444' :
+                                                             spec.color.includes('pink') ? '#ec4899' : '#6366f1'} />
+                                <stop offset="100%" stopColor={spec.color.includes('blue') ? '#2563eb' : 
+                                                               spec.color.includes('purple') ? '#9333ea' :
+                                                               spec.color.includes('green') ? '#16a34a' :
+                                                               spec.color.includes('yellow') ? '#ca8a04' :
+                                                               spec.color.includes('red') ? '#dc2626' :
+                                                               spec.color.includes('pink') ? '#db2777' : '#4f46e5'} />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                          
+                          {/* 중앙 텍스트 */}
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <div className={`text-4xl font-bold bg-gradient-to-r ${spec.color} bg-clip-text text-transparent mb-0.5`}>
+                              {spec.score.toFixed(1)}
+                            </div>
+                            <div className="text-xs text-text-gray font-semibold">/ 10점</div>
+                          </div>
+                        </div>
+
+                        {/* 카테고리 이름 */}
+                        <div className="text-center">
+                          <h3 className="text-lg font-bold text-text-dark mb-1.5 group-hover:text-primary transition-colors">
+                            {spec.name}
+                          </h3>
+                          
+                          {/* 점수 설명 */}
+                          <div className="flex items-center justify-center gap-1.5 mb-3">
+                            {spec.score >= 8 ? (
+                              <>
+                                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-xs text-green-600 font-semibold">우수</span>
+                              </>
+                            ) : spec.score >= 6 ? (
+                              <>
+                                <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-xs text-blue-600 font-semibold">보통</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                                <span className="text-xs text-orange-600 font-semibold">개선 필요</span>
+                              </>
+                            )}
+                          </div>
+
+                          {/* 진행 바 */}
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full bg-gradient-to-r ${spec.color} rounded-full transition-all duration-1000`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* 호버 시 디테일 정보 */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-black/90 to-black/80 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-5">
+                          <div className="text-center text-white">
+                            <div className="text-2xl font-bold mb-2">{spec.name}</div>
+                            <div className="text-xs text-gray-300 mb-3">
+                              현재 {spec.score.toFixed(1)}점 / 10점 만점
+                            </div>
+                            <button 
+                              onClick={() => router.push('/onboarding')}
+                              className="bg-white text-primary px-5 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors"
+                            >
+                              상세보기
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 전체 평균 점수 */}
+                <div className="bg-white rounded-xl p-6 shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold text-text-dark mb-1">
+                        종합 평균 점수
+                      </h3>
+                      <p className="text-xs text-text-gray">
+                        7개 분야의 평균 점수입니다
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-4xl font-bold text-primary mb-0.5">
+                        {avgScore.toFixed(1)}
+                      </div>
+                      <div className="text-xs text-text-gray font-semibold">/ 10점</div>
+                    </div>
+                  </div>
+                  
+                  {/* 전체 진행률 */}
+                  <div className="mt-5">
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-blue-400 rounded-full transition-all duration-1000"
+                        style={{ width: `${(avgScore / 10) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* 세부 정보 */}
-          <div className="space-y-6">
+          <div className="space-y-5">
             {/* 스펙 수정 안내 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-title-2 font-bold text-blue-900 mb-2">스펙 업데이트</h3>
-                  <p className="text-body-2 text-blue-800">
+                  <h3 className="text-lg font-bold text-blue-900 mb-1">스펙 체크</h3>
+                  <p className="text-sm text-blue-800">
                     각 섹션의 수정 버튼을 클릭하여 최신 정보로 업데이트하세요
                   </p>
                 </div>
                 <button
                   onClick={() => router.push('/onboarding')}
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-all"
+                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-all"
                 >
                   전체 재입력
                 </button>
@@ -143,11 +497,11 @@ export default function DashboardPage() {
 
             {/* 학력 */}
             {data.education && (
-              <div className="border border-border-color rounded-2xl p-6 hover:shadow-toss-hover transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-title-2 font-bold text-text-dark">학력</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreLevel(data.radar_scores.education).color}`}>
+              <div className="border border-border-color rounded-xl p-5 hover:shadow-toss-hover transition-all">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="text-lg font-bold text-text-dark">학력</h3>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getScoreLevel(data.radar_scores.education).color}`}>
                       {getScoreLevel(data.radar_scores.education).label}
                     </span>
                   </div>
