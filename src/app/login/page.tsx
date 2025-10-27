@@ -20,11 +20,43 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await apiPost<{
-        message: string;
-        user_id: string;
-        onboarding_completed: boolean;
-      }>('/auth/login', formData);
+      // 1. 먼저 로그인 시도
+      let response;
+      try {
+        response = await apiPost<{
+          message: string;
+          user_id: string;
+          onboarding_completed: boolean;
+        }>('/auth/login', formData);
+      } catch (loginError: any) {
+        console.log('로그인 실패, 회원가입 시도:', loginError);
+        
+        // 2. 로그인 실패 시 자동 회원가입 시도
+        try {
+          const registerResponse = await apiPost<{
+            message: string;
+            user_id: string;
+          }>('/auth/register', {
+            user_id: formData.user_id,
+            password: formData.password,
+            email: `${formData.user_id}@example.com`, // 임시 이메일
+            name: formData.user_id
+          });
+          
+          console.log('회원가입 성공:', registerResponse);
+          
+          // 3. 회원가입 성공 후 다시 로그인
+          response = await apiPost<{
+            message: string;
+            user_id: string;
+            onboarding_completed: boolean;
+          }>('/auth/login', formData);
+          
+        } catch (registerError: any) {
+          console.error('회원가입 실패:', registerError);
+          throw loginError; // 원래 로그인 에러 던지기
+        }
+      }
 
       // 로그인 성공 - user_id 저장
       setUserId(response.user_id);
@@ -36,7 +68,8 @@ export default function LoginPage() {
         router.push('/onboarding');
       }
     } catch (err: any) {
-      setError(err.error || '로그인에 실패했습니다.');
+      console.error('로그인 프로세스 실패:', err);
+      setError(err.error || err.message || '로그인에 실패했습니다.');
     } finally {
       setLoading(false);
     }
