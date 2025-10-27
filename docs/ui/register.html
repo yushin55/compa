@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - 스텝업(Step-Up)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .register-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+
+        .register-box {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .register-header h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .register-header p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .register-form .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .password-hint {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .terms-group {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-light);
+        }
+
+        .login-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-box">
+            <div class="register-header">
+                <h1>🎯 스텝업 회원가입</h1>
+                <p>목표를 향한 첫 걸음을 시작하세요</p>
+            </div>
+
+            <form class="register-form" id="registerForm" onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="username">아이디 *</label>
+                    <input type="text" id="username" class="form-control" placeholder="아이디를 입력하세요" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">이메일 *</label>
+                    <input type="email" id="email" class="form-control" placeholder="example@email.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">비밀번호 *</label>
+                    <input type="password" id="password" class="form-control" placeholder="비밀번호를 입력하세요" required>
+                    <div class="password-hint">영문, 숫자, 특수문자 포함 8자 이상</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="passwordConfirm">비밀번호 확인 *</label>
+                    <input type="password" id="passwordConfirm" class="form-control" placeholder="비밀번호를 다시 입력하세요" required>
+                </div>
+
+                <div class="terms-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="termsAll" onchange="toggleAllTerms(this)">
+                        <label for="termsAll">전체 약관에 동의합니다</label>
+                    </div>
+                    <hr style="margin: 0.75rem 0; border: none; border-top: 1px solid var(--border-color);">
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="term-checkbox" id="terms1" required>
+                        <label for="terms1">이용약관 동의 (필수)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="term-checkbox" id="terms2" required>
+                        <label for="terms2">개인정보 처리방침 동의 (필수)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" class="term-checkbox" id="terms3">
+                        <label for="terms3">마케팅 정보 수신 동의 (선택)</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">회원가입</button>
+
+                <div class="login-link">
+                    이미 계정이 있으신가요? <a href="login.html">로그인</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        function toggleAllTerms(checkbox) {
+            const checkboxes = document.querySelectorAll('.term-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+        }
+
+        function handleRegister(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('passwordConfirm').value;
+            const terms1 = document.getElementById('terms1').checked;
+            const terms2 = document.getElementById('terms2').checked;
+
+            // 비밀번호 확인
+            if (password !== passwordConfirm) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            // 필수 약관 확인
+            if (!terms1 || !terms2) {
+                alert('필수 약관에 동의해주세요.');
+                return;
+            }
+
+            // 회원가입 처리 (데모용)
+            alert('회원가입이 완료되었습니다!');
+            window.location.href = 'login.html';
+        }
+
+        // 약관 체크박스 동기화
+        document.addEventListener('DOMContentLoaded', function() {
+            const termCheckboxes = document.querySelectorAll('.term-checkbox');
+            const termsAll = document.getElementById('termsAll');
+            
+            termCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const allChecked = Array.from(termCheckboxes).slice(0, 2).every(cb => cb.checked);
+                    termsAll.checked = allChecked;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
