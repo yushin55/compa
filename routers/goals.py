@@ -3,12 +3,62 @@ from models.schemas import Goal, GoalCreate, GoalUpdate
 from config.database import supabase
 from utils.helpers import parse_json_field, serialize_json_field
 
+from typing import List
+
 router = APIRouter(prefix="/goals", tags=["목표"])
+
+
+@router.get("/list", response_model=List[Goal])
+async def get_all_goals(x_user_id: str = Header(...)):
+    """사용자의 모든 목표 목록 조회"""
+    try:
+        result = supabase.table("goals").select("*").eq("user_id", x_user_id).order("created_at", desc=True).execute()
+        
+        goals = []
+        for goal in (result.data or []):
+            goal['requirements'] = parse_json_field(goal.get('requirements'))
+            goal['preferred'] = parse_json_field(goal.get('preferred'))
+            goals.append(goal)
+        
+        return goals
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_SERVER_ERROR"}
+        )
+
+
+@router.get("/{goal_id}", response_model=Goal)
+async def get_goal(goal_id: int, x_user_id: str = Header(...)):
+    """특정 목표 상세 조회"""
+    try:
+        result = supabase.table("goals").select("*").eq("id", goal_id).eq("user_id", x_user_id).execute()
+        
+        if not result.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "목표를 찾을 수 없습니다", "code": "NOT_FOUND"}
+            )
+        
+        goal = result.data[0]
+        goal['requirements'] = parse_json_field(goal.get('requirements'))
+        goal['preferred'] = parse_json_field(goal.get('preferred'))
+        
+        return goal
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "INTERNAL_SERVER_ERROR"}
+        )
 
 
 @router.get("", response_model=Goal)
 async def get_current_goal(x_user_id: str = Header(...)):
-    """현재 목표 조회"""
+    """현재 활성 목표 조회"""
     try:
         goal = supabase.table("goals").select("*").eq("user_id", x_user_id).eq("is_active", True).execute()
         
@@ -57,6 +107,128 @@ async def create_goal(goal_data: GoalCreate, x_user_id: str = Header(...)):
         
         return result_data
     
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "BAD_REQUEST"}
+        )
+
+
+@router.post("/from-job-posting/{job_posting_id}", response_model=Goal, status_code=status.HTTP_201_CREATED)
+async def create_goal_from_job_posting(job_posting_id: int, x_user_id: str = Header(...)):
+    """채용 공고에서 목표 생성 (로드맵 자동 생성 포함)"""
+    try:
+        # 1. 채용 공고 조회
+        job_posting = supabase.table("job_postings").select("*").eq("id", job_posting_id).execute()
+        
+        if not job_posting.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "채용 공고를 찾을 수 없습니다", "code": "NOT_FOUND"}
+            )
+        
+        job = job_posting.data[0]
+        
+        # 2. 기존 활성 목표 비활성화
+        supabase.table("goals").update({"is_active": False}).eq("user_id", x_user_id).execute()
+        
+        # 3. requirements와 preferred를 문자열 배열로 변환
+        requirements_list = []
+        preferred_list = []
+        
+        if isinstance(job.get("requirements"), list):
+            requirements_list = [req.get("description", "") for req in job["requirements"]]
+        elif isinstance(job.get("requirements"), str):
+            requirements_list = parse_json_field(job["requirements"])
+            if isinstance(requirements_list, list) and len(requirements_list) > 0 and isinstance(requirements_list[0], dict):
+                requirements_list = [req.get("description", "") for req in requirements_list]
+        
+        if isinstance(job.get("preferred"), list):
+            preferred_list = [pref.get("description", "") for pref in job["preferred"]]
+        elif isinstance(job.get("preferred"), str):
+            preferred_list = parse_json_field(job["preferred"])
+            if isinstance(preferred_list, list) and len(preferred_list) > 0 and isinstance(preferred_list[0], dict):
+                preferred_list = [pref.get("description", "") for pref in preferred_list]
+        
+        # 4. 새 목표 생성
+        goal_data = {
+            "user_id": x_user_id,
+            "job_title": job["title"],
+            "company_name": job["company"],
+            "location": job.get("location"),
+            "experience_level": job.get("experience_level"),
+            "requirements": serialize_json_field(requirements_list),
+            "preferred": serialize_json_field(preferred_list),
+            "is_active": True
+        }
+        
+        result = supabase.table("goals").insert(goal_data).execute()
+        
+        if not result.data:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"error": "목표 생성에 실패했습니다", "code": "INTERNAL_SERVER_ERROR"}
+            )
+        
+        goal_id = result.data[0]["id"]
+        
+        # 5. 자동으로 태스크(로드맵) 생성
+        from datetime import date, timedelta
+        
+        # 기존 태스크의 최대 order_index 가져오기
+        existing_tasks = supabase.table("tasks").select("order_index").eq("user_id", x_user_id).order("order_index", desc=True).limit(1).execute()
+        max_order = existing_tasks.data[0]["order_index"] if existing_tasks.data else -1
+        
+        today = date.today()
+        all_requirements = requirements_list + preferred_list
+        
+        for idx, requirement in enumerate(all_requirements):
+            priority = "high" if idx < len(requirements_list) else "medium"
+            due_date = today + timedelta(weeks=2 * (idx + 1))
+            
+            # 요구사항에 따라 태스크 제목 및 설명 생성
+            task_title = f"{requirement} 준비"
+            task_description = f"{requirement}를 달성하기 위한 학습 및 실습"
+            
+            # 키워드 기반 구체화
+            if "React" in requirement or "Vue" in requirement:
+                task_title = f"{requirement.split()[0]} 학습 및 프로젝트 개발"
+                task_description = f"{requirement}를 충족하기 위한 실무 프로젝트 진행"
+            elif "Java" in requirement or "Spring" in requirement:
+                task_title = f"{requirement.split()[0]} 프레임워크 학습"
+                task_description = f"{requirement} 기반 백엔드 애플리케이션 개발"
+            elif "TypeScript" in requirement:
+                task_title = "TypeScript 강의 수강 및 실습"
+                task_description = "TypeScript 기초부터 고급 기능까지 학습"
+            elif "Kotlin" in requirement or "Swift" in requirement:
+                task_title = f"{requirement.split()[0]} 모바일 앱 개발"
+                task_description = f"{requirement}를 활용한 개인 프로젝트 개발"
+            elif "프로젝트" in requirement:
+                task_title = "포트폴리오 프로젝트 개발"
+                task_description = "실무 수준의 프로젝트를 기획하고 개발"
+            
+            task_data = {
+                "user_id": x_user_id,
+                "goal_id": goal_id,
+                "title": task_title,
+                "description": task_description,
+                "due_date": str(due_date),
+                "is_completed": False,
+                "priority": priority,
+                "order_index": max_order + idx + 1
+            }
+            
+            supabase.table("tasks").insert(task_data).execute()
+        
+        # 6. 생성된 목표 반환
+        result_data = result.data[0]
+        result_data["requirements"] = parse_json_field(result_data.get("requirements"))
+        result_data["preferred"] = parse_json_field(result_data.get("preferred"))
+        
+        return result_data
+    
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

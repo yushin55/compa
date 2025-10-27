@@ -231,8 +231,8 @@ class JobPosting(BaseModel):
     title: str
     description: Optional[str] = None
     url: Optional[str] = None
-    requirements: Optional[List[dict]] = []
-    preferred: Optional[List[dict]] = []
+    requirements: Optional[List[str]] = []
+    preferred: Optional[List[str]] = []
     location: Optional[str] = None
     experience_level: Optional[str] = None
     is_active: bool

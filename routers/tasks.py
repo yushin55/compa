@@ -318,3 +318,100 @@ async def auto_generate_tasks(data: TaskAutoGenerate, x_user_id: str = Header(..
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": str(e), "code": "BAD_REQUEST"}
         )
+
+
+@router.patch("/tasks/batch-update", status_code=status.HTTP_200_OK)
+async def batch_update_tasks(
+    task_ids: List[int],
+    update_data: TaskUpdate,
+    x_user_id: str = Header(...)
+):
+    """여러 태스크를 한번에 업데이트"""
+    try:
+        if not task_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "업데이트할 태스크 ID가 없습니다", "code": "BAD_REQUEST"}
+            )
+        
+        update_dict = {k: v for k, v in update_data.dict().items() if v is not None}
+        
+        if not update_dict:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "업데이트할 데이터가 없습니다", "code": "BAD_REQUEST"}
+            )
+        
+        if "due_date" in update_dict and update_dict["due_date"]:
+            update_dict["due_date"] = str(update_dict["due_date"])
+        
+        # 각 태스크를 개별적으로 업데이트 (사용자 권한 확인)
+        updated_tasks = []
+        for task_id in task_ids:
+            # 태스크 소유권 확인
+            task = supabase.table("tasks").select("id").eq("id", task_id).eq("user_id", x_user_id).execute()
+            
+            if not task.data:
+                continue  # 권한 없는 태스크는 스킵
+            
+            result = supabase.table("tasks").update(update_dict).eq("id", task_id).execute()
+            if result.data:
+                updated_tasks.extend(result.data)
+        
+        return {
+            "message": f"{len(updated_tasks)}개의 태스크가 업데이트되었습니다",
+            "updated_count": len(updated_tasks),
+            "tasks": updated_tasks
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "BAD_REQUEST"}
+        )
+
+
+@router.patch("/tasks/batch-complete", status_code=status.HTTP_200_OK)
+async def batch_complete_tasks(
+    task_ids: List[int],
+    x_user_id: str = Header(...)
+):
+    """여러 태스크를 한번에 완료 처리"""
+    try:
+        if not task_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "완료 처리할 태스크 ID가 없습니다", "code": "BAD_REQUEST"}
+            )
+        
+        completed_tasks = []
+        for task_id in task_ids:
+            # 태스크 소유권 확인
+            task = supabase.table("tasks").select("id").eq("id", task_id).eq("user_id", x_user_id).execute()
+            
+            if not task.data:
+                continue
+            
+            result = supabase.table("tasks").update({
+                "is_completed": True,
+                "completed_at": datetime.utcnow().isoformat()
+            }).eq("id", task_id).execute()
+            
+            if result.data:
+                completed_tasks.extend(result.data)
+        
+        return {
+            "message": f"{len(completed_tasks)}개의 태스크가 완료되었습니다",
+            "completed_count": len(completed_tasks),
+            "tasks": completed_tasks
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "BAD_REQUEST"}
+        )
