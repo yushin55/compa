@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Header, HTTPException, status, Query
 from typing import List, Optional
-from datetime import datetime, date
-from models.schemas import Task, TaskCreate, TaskUpdate
+from datetime import datetime, date, timedelta
+from models.schemas import Task, TaskCreate, TaskUpdate, TaskAutoGenerate
 from config.database import supabase
 from utils.helpers import days_until
 
@@ -253,4 +253,68 @@ async def get_roadmap_progress(x_user_id: str = Header(...)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"error": str(e), "code": "UNAUTHORIZED"}
+        )
+
+
+@router.post("/tasks/auto-generate", status_code=status.HTTP_201_CREATED)
+async def auto_generate_tasks(data: TaskAutoGenerate, x_user_id: str = Header(...)):
+    """태스크 자동 생성 (AI 기반)"""
+    try:
+        # 기존 태스크 order_index 최대값 확인
+        existing_tasks = supabase.table("tasks").select("order_index").eq("user_id", x_user_id).order("order_index", desc=True).limit(1).execute()
+        max_order = existing_tasks.data[0]["order_index"] if existing_tasks.data else -1
+        
+        generated_tasks = []
+        today = date.today()
+        
+        # requirements 배열을 기반으로 태스크 생성
+        for idx, requirement in enumerate(data.requirements):
+            priority = "high"  # 기본적으로 필수 요구사항은 high
+            
+            # 2주 간격으로 due_date 설정
+            due_date = today + timedelta(weeks=2 * (idx + 1))
+            
+            # 요구사항에 따라 태스크 제목 및 설명 생성
+            task_title = f"{requirement} 준비"
+            task_description = f"{requirement}를 달성하기 위한 학습 및 실습"
+            
+            # 특정 키워드에 따라 더 구체적인 태스크 생성
+            if "React" in requirement:
+                task_title = "React 공식 문서 학습 및 프로젝트 개발"
+                task_description = "React 공식 문서를 학습하고 개인 프로젝트를 진행합니다"
+            elif "TypeScript" in requirement:
+                task_title = "TypeScript 강의 수강 및 실습"
+                task_description = "TypeScript 기초부터 고급 기능까지 학습합니다"
+            elif "프로젝트" in requirement:
+                task_title = "포트폴리오 프로젝트 개발"
+                task_description = "실무 수준의 프로젝트를 기획하고 개발합니다"
+            elif "TOEIC" in requirement or "토익" in requirement:
+                task_title = "TOEIC 목표 점수 달성"
+                task_description = "TOEIC 학습 및 모의고사 준비"
+                priority = "medium"
+            
+            task_data = {
+                "user_id": x_user_id,
+                "goal_id": data.goal_id,
+                "title": task_title,
+                "description": task_description,
+                "due_date": str(due_date),
+                "is_completed": False,
+                "priority": priority,
+                "order_index": max_order + idx + 1
+            }
+            
+            result = supabase.table("tasks").insert(task_data).execute()
+            if result.data:
+                generated_tasks.append(result.data[0])
+        
+        return {
+            "message": f"{len(generated_tasks)}개의 태스크가 자동 생성되었습니다",
+            "tasks": generated_tasks
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "BAD_REQUEST"}
         )

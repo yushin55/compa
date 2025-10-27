@@ -133,3 +133,60 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_goal_id ON tasks(goal_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+
+-- 10. job_postings 테이블 (채용 공고)
+CREATE TABLE IF NOT EXISTS job_postings (
+    id BIGSERIAL PRIMARY KEY,
+    company VARCHAR(200) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    url VARCHAR(500),
+    requirements JSONB,
+    preferred JSONB,
+    location VARCHAR(100),
+    experience_level VARCHAR(50),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_postings_is_active ON job_postings(is_active);
+CREATE INDEX IF NOT EXISTS idx_job_postings_company ON job_postings(company);
+
+-- 초기 채용 공고 데이터
+INSERT INTO job_postings (company, title, description, url, requirements, preferred, location, experience_level, is_active) VALUES
+(
+  '카카오',
+  '프론트엔드 개발자',
+  '카카오의 다양한 서비스를 함께 만들어갈 프론트엔드 개발자를 모집합니다.',
+  'https://careers.kakao.com/jobs',
+  '[
+    {"description": "React, Vue.js 등 프론트엔드 프레임워크 경험 2년 이상", "category": "필수", "priority": "required"},
+    {"description": "JavaScript/TypeScript 능숙", "category": "필수", "priority": "required"},
+    {"description": "RESTful API 연동 경험", "category": "필수", "priority": "required"}
+  ]'::jsonb,
+  '[
+    {"description": "웹 성능 최적화 경험", "category": "우대", "priority": "preferred"},
+    {"description": "Next.js 사용 경험", "category": "우대", "priority": "preferred"}
+  ]'::jsonb,
+  '판교',
+  '2년 이상',
+  true
+),
+(
+  '네이버',
+  '백엔드 개발자',
+  '네이버 서비스의 안정적인 운영과 새로운 기능 개발을 담당할 백엔드 개발자를 찾습니다.',
+  'https://recruit.navercorp.com',
+  '[
+    {"description": "Java, Spring Framework 경험 3년 이상", "category": "필수", "priority": "required"},
+    {"description": "RDBMS, NoSQL 활용 경험", "category": "필수", "priority": "required"}
+  ]'::jsonb,
+  '[
+    {"description": "대용량 트래픽 처리 경험", "category": "우대", "priority": "preferred"},
+    {"description": "MSA 아키텍처 이해", "category": "우대", "priority": "preferred"}
+  ]'::jsonb,
+  '성남시 분당구',
+  '3년 이상',
+  true
+);

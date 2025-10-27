@@ -223,3 +223,23 @@ class DashboardData(BaseModel):
     activities: List[Activity] = []
     stats: dict
     radar_scores: dict
+
+
+class JobPosting(BaseModel):
+    id: int
+    company: str
+    title: str
+    description: Optional[str] = None
+    url: Optional[str] = None
+    requirements: Optional[List[dict]] = []
+    preferred: Optional[List[dict]] = []
+    location: Optional[str] = None
+    experience_level: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class TaskAutoGenerate(BaseModel):
+    goal_id: Optional[int] = None
+    requirements: List[str] = []

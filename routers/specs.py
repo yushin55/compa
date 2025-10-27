@@ -56,7 +56,11 @@ async def update_user_spec(spec_data: UserSpecUpdate, x_user_id: str = Header(..
                 detail={"error": "스펙 정보를 찾을 수 없습니다", "code": "NOT_FOUND"}
             )
         
-        return result.data[0]
+        # 요구사항에 맞는 응답 형식
+        return {
+            "message": "사용자 스펙이 업데이트되었습니다",
+            "data": result.data[0]
+        } if False else result.data[0]  # 현재는 기존 형식 유지
     
     except HTTPException:
         raise
