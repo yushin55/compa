@@ -600,12 +600,44 @@ export default function GoalSettingPage() {
       console.log('사용자 ID:', userId);
       console.log('공고 ID:', selectedJob.id, '타입:', typeof selectedJob.id);
       
-      // 1. 먼저 목표 생성 (이미 있으면 기존 목표 사용)
-      const goal: any = await apiPost(`/goals/from-job-posting/${selectedJob.id}`, {
-        target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      });
+      // 1. 먼저 기존 목표 확인 후 목표 생성
+      let goal: any;
+      try {
+        goal = await apiPost(`/goals/from-job-posting/${selectedJob.id}`, {
+          target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        });
+        console.log('목표 생성 완료:', goal);
+      } catch (goalError: any) {
+        console.log('목표 생성 오류:', goalError);
+        
+        // 중복 목표 오류인 경우 기존 목표 가져오기
+        if (goalError.message?.includes('duplicate') || goalError.message?.includes('already exists')) {
+          console.log('기존 목표가 있습니다. 기존 목표를 가져옵니다.');
+          
+          try {
+            // 기존 목표 목록 가져오기
+            const goals = await apiGet<any[]>('/goals/list');
+            console.log('기존 목표 목록:', goals);
+            
+            if (goals.length > 0) {
+              // 가장 최근 목표 사용
+              goal = goals[0];
+              console.log('기존 목표 사용:', goal);
+              
+              alert(`⚠️ 이미 진행 중인 목표가 있습니다.\n기존 목표: ${goal.job_title}\n\n추천 항목을 이 목표에 추가합니다.`);
+            } else {
+              throw new Error('목표를 찾을 수 없습니다.');
+            }
+          } catch (fetchError) {
+            console.error('기존 목표 가져오기 실패:', fetchError);
+            throw goalError; // 원래 오류 다시 던지기
+          }
+        } else {
+          throw goalError; // 다른 오류는 그대로 던지기
+        }
+      }
       
-      console.log('목표 생성 완료:', goal);
+      console.log('사용할 목표:', goal);
       
       // 2. 선택된 추천 항목을 태스크로 변환
       type TaskData = {
