@@ -589,15 +589,24 @@ export default function GoalSettingPage() {
     
     setGeneratingPlan(true);
     try {
-      // 선택된 추천 항목을 태스크로 변환
+      console.log('자동 계획 생성 시작:', selectedJob);
+      
+      // 1. 먼저 목표 생성 (이미 있으면 기존 목표 사용)
+      const goal = await apiPost(`/goals/from-job-posting/${selectedJob.id}`, {
+        target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      });
+      
+      console.log('목표 생성 완료:', goal);
+      
+      // 2. 선택된 추천 항목을 태스크로 변환
       const recommendedTasks = selectedRecommendations.map(id => {
-        // 어떤 타입의 추천인지 찾기
         const contest = recommendedItems.contests.find(c => c.id === id);
         if (contest) {
           return {
             title: contest.title,
-            description: `contest: 마감일: ${contest.deadline}\n${contest.keywords.join(', ')}`,
-            category: 'contest'
+            description: `마감일: ${contest.deadline}\n${contest.keywords.join(', ')}`,
+            category: '공모전',
+            due_date: contest.deadline
           };
         }
         
@@ -605,8 +614,9 @@ export default function GoalSettingPage() {
         if (cert) {
           return {
             title: cert.title,
-            description: `certificate: 예상 기간: ${cert.period}, 난이도: ${cert.difficulty}\n${cert.keywords.join(', ')}`,
-            category: 'certificate'
+            description: `예상 기간: ${cert.period}, 난이도: ${cert.difficulty}\n${cert.keywords.join(', ')}`,
+            category: '자격증',
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           };
         }
         
@@ -614,29 +624,55 @@ export default function GoalSettingPage() {
         if (lang) {
           return {
             title: lang.title,
-            description: `language: 목표: ${lang.target}, 예상 기간: ${lang.period}\n시험: ${lang.test}`,
-            category: 'language'
+            description: `목표: ${lang.target}, 시험: ${lang.test}`,
+            category: '어학',
+            due_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           };
         }
         
         return null;
       }).filter(Boolean);
 
-      // AI가 갭 분석을 기반으로 주간 계획 자동 생성
-      await apiPost('/tasks/auto-generate', {
-        job_posting_id: selectedJob.id,
-        recommended_tasks: recommendedTasks
-      });
+      // 3. 추천 항목이 있으면 태스크로 추가
+      if (recommendedTasks.length > 0) {
+        for (const task of recommendedTasks) {
+          await apiPost('/tasks', {
+            goal_id: goal.id,
+            title: task.title,
+            description: task.description,
+            category: task.category,
+            due_date: task.due_date,
+            is_completed: false
+          });
+        }
+        console.log('추천 항목 태스크 생성 완료:', recommendedTasks.length);
+      }
       
-      alert(`주간 계획이 생성되었습니다! (추천 항목 ${selectedRecommendations.length}개 포함)\n로드맵 페이지에서 확인하세요.`);
+      // 4. localStorage에도 저장 (즉시 반영)
+      const existingJobs = JSON.parse(localStorage.getItem('jobPostings') || '[]');
+      const newJob = {
+        id: selectedJob.id,
+        title: selectedJob.title,
+        company: selectedJob.company,
+        status: '진행중',
+        deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR'),
+        tags: selectedJob.requirements.filter(r => r.priority === 'required').slice(0, 2).map(r => r.description.substring(0, 10)),
+        requirements: selectedJob.requirements,
+        url: selectedJob.url
+      };
+      
+      const isDuplicate = existingJobs.some((job: any) => job.id === newJob.id);
+      if (!isDuplicate) {
+        const updatedJobs = [...existingJobs, newJob];
+        localStorage.setItem('jobPostings', JSON.stringify(updatedJobs));
+        window.dispatchEvent(new CustomEvent('jobPostingsUpdated', { detail: updatedJobs }));
+      }
+      
+      alert(`✅ 자동 계획이 생성되었습니다!\n- 목표: ${selectedJob.title}\n- 태스크: ${recommendedTasks.length}개\n\n로드맵 페이지에서 확인하세요.`);
       router.push('/roadmap');
     } catch (error) {
       console.error('자동 계획 생성 실패:', error);
-      // API 실패시에도 로드맵으로 이동 (오프라인 모드)
-      if (selectedRecommendations.length > 0) {
-        alert(`선택한 추천 항목 ${selectedRecommendations.length}개를 로드맵에 추가합니다.`);
-      }
-      router.push('/roadmap');
+      alert('❌ 계획 생성에 실패했습니다.\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
     } finally {
       setGeneratingPlan(false);
     }
