@@ -45,8 +45,9 @@ export const apiRequest = async <T>(
 ): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = getHeaders();
+  const method = options.method || 'GET';
   
-  console.log(`[API Request] ${options.method || 'GET'} ${url}`);
+  console.log(`[API Request] ${method} ${url}`);
   console.log('[API Headers]', headers);
   if (options.body) {
     console.log('[API Body]', options.body);
@@ -61,11 +62,10 @@ export const apiRequest = async <T>(
       },
     });
     
-    console.log(`[API Response] Status: ${response.status} ${response.statusText}`);
+    console.log(`[API Response] ${method} ${url} - Status: ${response.status} ${response.statusText}`);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[API Error Response]', errorText);
       
       let error;
       try {
@@ -78,7 +78,17 @@ export const apiRequest = async <T>(
         };
       }
       
-      throw new Error(`API Error (${response.status}): ${error.detail || error.error || error.message || errorText}`);
+      const errorCode = error.detail?.code || error.code;
+      const errorMessage = error.detail?.error || error.detail || error.error || error.message || errorText;
+      
+      // 404 NOT_FOUND는 정상적인 빈 결과 상황일 수 있으므로 경고 수준 낮춤
+      if (response.status === 404 && (errorCode === 'NOT_FOUND' || errorMessage?.includes('없습니다'))) {
+        console.log(`[API Info] ${method} ${url} - ${errorMessage}`);
+      } else {
+        console.error(`[API Error] ${method} ${url} - ${response.status}:`, errorText);
+      }
+      
+      throw new Error(`[${method} ${endpoint}] API Error (${response.status}): ${errorMessage}`);
     }
     
     // 204 No Content인 경우 빈 객체 반환

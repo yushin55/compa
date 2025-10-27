@@ -295,17 +295,13 @@ export default function GoalSettingPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      // API에서 데이터를 가져오되, 실패하면 REAL_JOB_POSTINGS 사용
+      // API에서 채용 공고 데이터 가져오기
       try {
-        const [postings, progress, dashboard] = await Promise.all([
-          apiGet<JobPosting[]>('/job-postings'),
-          apiGet<UserProgress>('/progress').catch(() => null),
-          apiGet<any>('/dashboard').catch(() => null),
-        ]);
+        const postings = await apiGet<JobPosting[]>('/job-postings');
         setJobPostings(postings.length > 0 ? postings : REAL_JOB_POSTINGS as any);
-        setUserProgress(dashboard || progress);
       } catch (error) {
         // API 실패시 실제 공고 데이터 사용
+        console.log('채용 공고 API 실패, 로컬 데이터 사용:', error);
         setJobPostings(REAL_JOB_POSTINGS as any);
       }
     } catch (error) {
@@ -600,8 +596,10 @@ export default function GoalSettingPage() {
       console.log('사용자 ID:', userId);
       console.log('공고 ID:', selectedJob.id, '타입:', typeof selectedJob.id);
       
-      // 1. 먼저 기존 목표 확인 후 목표 생성
-      let goal: any;
+      // 1. 먼저 기존 목표 확인
+      let goal: any = null;
+      let isExistingGoal = false;
+      
       try {
         goal = await apiPost(`/goals/from-job-posting/${selectedJob.id}`, {
           target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -610,34 +608,29 @@ export default function GoalSettingPage() {
       } catch (goalError: any) {
         console.log('목표 생성 오류:', goalError);
         
-        // 중복 목표 오류인 경우 기존 목표 가져오기
-        if (goalError.message?.includes('duplicate') || goalError.message?.includes('already exists')) {
-          console.log('기존 목표가 있습니다. 기존 목표를 가져옵니다.');
+        // 중복 목표 오류인 경우 - 이미 목표가 있다는 뜻
+        const errorMsg = goalError.message || '';
+        if (errorMsg.includes('duplicate') || errorMsg.includes('already exists') || errorMsg.includes('23505') || errorMsg.includes('goals_user_id_key')) {
+          console.log('⚠️ 이미 진행 중인 목표가 존재합니다.');
+          isExistingGoal = true;
           
-          try {
-            // 기존 목표 목록 가져오기
-            const goals = await apiGet<any[]>('/goals');
-            console.log('기존 목표 목록:', goals);
-            
-            if (goals.length > 0) {
-              // 가장 최근 목표 사용
-              goal = goals[0];
-              console.log('기존 목표 사용:', goal);
-              
-              alert(`⚠️ 이미 진행 중인 목표가 있습니다.\n기존 목표: ${goal.job_title}\n\n추천 항목을 이 목표에 추가합니다.`);
-            } else {
-              throw new Error('목표를 찾을 수 없습니다.');
-            }
-          } catch (fetchError) {
-            console.error('기존 목표 가져오기 실패:', fetchError);
-            throw goalError; // 원래 오류 다시 던지기
+          const confirmReplace = confirm(
+            `이미 진행 중인 목표가 있습니다.\n\n` +
+            `현재 시스템은 사용자당 하나의 목표만 지원합니다.\n` +
+            `새로운 목표로 변경하시려면 로드맵 페이지에서 기존 목표를 먼저 삭제해주세요.\n\n` +
+            `채용 공고만 추가하시겠습니까?`
+          );
+          
+          if (!confirmReplace) {
+            setGeneratingPlan(false);
+            return;
           }
         } else {
           throw goalError; // 다른 오류는 그대로 던지기
         }
       }
       
-      console.log('사용할 목표:', goal);
+      console.log('사용할 목표:', goal, '기존 목표 여부:', isExistingGoal);
       
       // 2. 선택된 추천 항목을 태스크로 변환
       type TaskData = {
@@ -645,6 +638,7 @@ export default function GoalSettingPage() {
         description: string;
         category: string;
         due_date: string;
+        priority: 'required' | 'preferred';
       };
       
       const recommendedTasks: TaskData[] = selectedRecommendations.map(id => {
@@ -654,7 +648,8 @@ export default function GoalSettingPage() {
             title: contest.title,
             description: `마감일: ${contest.deadline}\n${contest.keywords.join(', ')}`,
             category: '공모전',
-            due_date: contest.deadline
+            due_date: contest.deadline,
+            priority: 'preferred' as const
           };
         }
         
@@ -664,7 +659,8 @@ export default function GoalSettingPage() {
             title: cert.title,
             description: `예상 기간: ${cert.period}, 난이도: ${cert.difficulty}\n${cert.keywords.join(', ')}`,
             category: '자격증',
-            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            priority: 'preferred' as const
           };
         }
         
@@ -674,7 +670,8 @@ export default function GoalSettingPage() {
             title: lang.title,
             description: `목표: ${lang.target}, 시험: ${lang.test}`,
             category: '어학',
-            due_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            due_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            priority: 'preferred' as const
           };
         }
         
@@ -682,18 +679,25 @@ export default function GoalSettingPage() {
       }).filter((task): task is TaskData => task !== null);
 
       // 3. 추천 항목이 있으면 태스크로 추가
-      if (recommendedTasks.length > 0) {
+      if (recommendedTasks.length > 0 && goal && goal.id) {
         for (const task of recommendedTasks) {
+          // 프론트엔드 priority를 백엔드 형식으로 변환
+          const backendPriority = task.priority === 'required' ? 'high' : 'medium';
+          
           await apiPost('/tasks', {
             goal_id: goal.id,
             title: task.title,
             description: task.description,
             category: task.category,
             due_date: task.due_date,
+            priority: backendPriority, // 백엔드 형식: 'high' 또는 'medium'
             is_completed: false
           });
         }
         console.log('추천 항목 태스크 생성 완료:', recommendedTasks.length);
+      } else if (recommendedTasks.length > 0 && !goal) {
+        console.log('목표 ID가 없어서 태스크를 생성할 수 없습니다. (기존 목표가 있는 경우)');
+        console.log('추천 항목:', recommendedTasks);
       }
       
       // 4. localStorage에도 저장 (즉시 반영)
@@ -716,7 +720,13 @@ export default function GoalSettingPage() {
         window.dispatchEvent(new CustomEvent('jobPostingsUpdated', { detail: updatedJobs }));
       }
       
-      alert(`✅ 자동 계획이 생성되었습니다!\n- 목표: ${selectedJob.title}\n- 태스크: ${recommendedTasks.length}개\n\n로드맵 페이지에서 확인하세요.`);
+      // 기존 목표가 있는 경우 (태스크 생성 스킵)
+      if (isExistingGoal) {
+        alert(`ℹ️ 이미 진행 중인 목표가 있습니다.\n채용 공고만 추가되었습니다.\n\n기존 목표를 삭제하고 다시 시도하거나, 로드맵 페이지에서 직접 태스크를 추가하세요.`);
+      } else {
+        // 새로운 목표 생성 성공
+        alert(`✅ 자동 계획이 생성되었습니다!\n- 목표: ${selectedJob.title}\n- 태스크: ${recommendedTasks.length}개\n\n로드맵 페이지에서 확인하세요.`);
+      }
       router.push('/roadmap');
     } catch (error) {
       console.error('자동 계획 생성 실패 상세:', error);

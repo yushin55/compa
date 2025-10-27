@@ -31,6 +31,7 @@ type DailyTask = {
   category: string;
   dateRange: string;
   date?: string;
+  priority?: 'required' | 'preferred' | string; // 필수/우대 구분
 };
 
 type JobPosting = {
@@ -70,6 +71,12 @@ export default function RoadmapPage() {
   const [draggedTask, setDraggedTask] = useState<DailyTask | null>(null);
   const [newItemInput, setNewItemInput] = useState<{ [key: string]: string }>({});
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  
+  // 체크박스 상태 관리
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
+  const [selectAllTasks, setSelectAllTasks] = useState(false);
+  const [selectAllJobs, setSelectAllJobs] = useState(false);
 
   // localStorage에서 데이터 로드하는 함수
   const loadFromLocalStorage = () => {
@@ -167,8 +174,30 @@ export default function RoadmapPage() {
       loadFromLocalStorage();
       
       // 백엔드 API에서 목표 목록 가져오기
-      const goals = await apiGet<any[]>('/goals').catch(() => []);
-      console.log('백엔드에서 가져온 목표들:', goals);
+      const response = await apiGet<any>('/goals').catch((error) => {
+        // 404는 정상 상황 (목표가 없음)
+        if (error.message?.includes('404') || error.message?.includes('NOT_FOUND')) {
+          console.log('아직 설정된 목표가 없습니다.');
+          return null;
+        }
+        console.error('목표 로딩 중 오류:', error);
+        return null;
+      });
+      console.log('백엔드에서 가져온 응답:', response);
+      
+      // 응답이 배열인지 객체인지 확인
+      let goals: any[] = [];
+      if (response) {
+        if (Array.isArray(response)) {
+          goals = response;
+        } else if (response.goals && Array.isArray(response.goals)) {
+          goals = response.goals;
+        } else if (typeof response === 'object') {
+          // 단일 객체인 경우 배열로 변환
+          goals = [response];
+        }
+      }
+      console.log('처리된 목표 배열:', goals);
       
       if (goals.length > 0) {
         const matchedJobs: JobPosting[] = [];
@@ -176,17 +205,46 @@ export default function RoadmapPage() {
         
         // 각 목표에 대해 처리
         for (const goal of goals) {
+          console.log('처리 중인 목표:', goal);
+          console.log('목표 필드:', {
+            id: goal.id,
+            job_posting_id: goal.job_posting_id,
+            job_title: goal.job_title,
+            company_name: goal.company_name,
+            target_date: goal.target_date,
+            is_active: goal.is_active
+          });
+          
           // 공고 정보 변환
+          // 백엔드에서 requirements[]와 preferred[] 배열을 받아서 하나의 배열로 합치기
+          const combinedRequirements = [
+            ...(Array.isArray(goal.requirements) 
+              ? goal.requirements.map((req: string) => ({
+                  description: req,
+                  category: '필수',
+                  priority: 'required' as const
+                }))
+              : []),
+            ...(Array.isArray(goal.preferred) 
+              ? goal.preferred.map((pref: string) => ({
+                  description: pref,
+                  category: '우대',
+                  priority: 'preferred' as const
+                }))
+              : [])
+          ];
+          
           const job: JobPosting = {
             id: String(goal.job_posting_id || goal.id),
-            title: goal.job_title || '제목 없음',
-            company: goal.company_name || '회사 미정',
+            title: goal.job_title || goal.title || '제목 없음',
+            company: goal.company_name || goal.company || '회사 미정',
             status: goal.is_active ? '진행중' : '마감',
-            deadline: goal.target_date || '상시채용',
+            deadline: goal.target_date ? new Date(goal.target_date).toLocaleDateString('ko-KR') : '상시채용',
             tags: [goal.company_name, goal.job_title].filter(Boolean),
-            requirements: goal.requirements || [],
-            url: goal.url
+            requirements: combinedRequirements,
+            url: goal.url || ''
           };
+          console.log('변환된 Job:', job);
           matchedJobs.push(job);
           
           // 해당 목표의 태스크들 가져오기
@@ -196,12 +254,24 @@ export default function RoadmapPage() {
             
             // 태스크를 DailyTask 형식으로 변환
             tasks.forEach(task => {
+              // 백엔드 priority 값 변환: high -> required, medium/low -> preferred
+              let frontendPriority: 'required' | 'preferred' = 'preferred';
+              if (task.priority === 'high') {
+                frontendPriority = 'required';
+              } else if (task.priority === 'medium' || task.priority === 'low') {
+                frontendPriority = 'preferred';
+              } else if (task.priority === 'required' || task.priority === 'preferred') {
+                // 이미 올바른 형식인 경우
+                frontendPriority = task.priority;
+              }
+              
               allTasks.push({
                 id: String(task.id),
                 title: task.title || task.description,
                 category: task.category || '학습',
                 dateRange: task.due_date ? new Date(task.due_date).toLocaleDateString('ko-KR') : '기한 없음',
-                date: task.due_date
+                date: task.due_date,
+                priority: frontendPriority
               });
               
               // 완료된 태스크는 캘린더에도 추가
@@ -245,7 +315,9 @@ export default function RoadmapPage() {
     }
   };
 
-  const addRequirementToSchedule = async (requirement: string, jobTitle: string) => {
+    const addRequirementToSchedule = async (requirement: string, jobTitle: string, priority: 'required' | 'preferred' = 'preferred') => {
+    // 프론트엔드 priority를 백엔드 형식으로 변환
+    const backendPriority = priority === 'required' ? 'high' : 'medium';
     const today = new Date();
     const scheduledDate = new Date(today);
     scheduledDate.setDate(scheduledDate.getDate() + 7);
@@ -263,7 +335,8 @@ export default function RoadmapPage() {
       title: `${jobTitle} - ${requirement}`,
       category: '자격요건',
       dateRange: `${scheduledDate.getFullYear()}년 ${scheduledDate.getMonth() + 1}월 ${scheduledDate.getDate()}일`,
-      date: dateStr
+      date: dateStr,
+      priority: priority
     };
     
     setCalendarTasks(prev => [...prev, newTask]);
@@ -274,7 +347,7 @@ export default function RoadmapPage() {
         title: `${jobTitle} - ${requirement}`,
         description: requirement,
         due_date: dateStr,
-        priority: 'high'
+        priority: backendPriority // 백엔드 형식 사용: 'high' 또는 'medium'
       });
     } catch (error) {
       console.log('오프라인 모드: 로컬에만 저장됨');
@@ -346,6 +419,117 @@ export default function RoadmapPage() {
       } catch (error) {
         console.error('태스크 삭제 실패:', error);
       }
+      
+      // 선택 목록에서도 제거
+      setSelectedTaskIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    }
+  };
+
+  // Task List 체크박스 핸들러
+  const handleToggleAllTasks = () => {
+    if (selectAllTasks) {
+      setSelectedTaskIds(new Set());
+    } else {
+      setSelectedTaskIds(new Set(dailyTasks.map(t => t.id)));
+    }
+    setSelectAllTasks(!selectAllTasks);
+  };
+
+  const handleToggleTask = (taskId: string) => {
+    setSelectedTaskIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelectedTasks = async () => {
+    if (selectedTaskIds.size === 0) {
+      alert('삭제할 항목을 선택해주세요.');
+      return;
+    }
+
+    if (confirm(`선택한 ${selectedTaskIds.size}개의 작업을 삭제하시겠습니까?`)) {
+      const idsToDelete = Array.from(selectedTaskIds);
+      
+      // UI에서 먼저 제거
+      setDailyTasks(prev => prev.filter(t => !selectedTaskIds.has(t.id)));
+      setCalendarTasks(prev => prev.filter(t => !selectedTaskIds.has(t.id)));
+      
+      // 백엔드에서 삭제
+      for (const taskId of idsToDelete) {
+        try {
+          await apiPost(`/tasks/${taskId}/delete`, {});
+        } catch (error) {
+          console.error(`태스크 ${taskId} 삭제 실패:`, error);
+        }
+      }
+      
+      setSelectedTaskIds(new Set());
+      setSelectAllTasks(false);
+    }
+  };
+
+  // Job 체크박스 핸들러
+  const handleToggleAllJobs = () => {
+    if (selectAllJobs) {
+      setSelectedJobIds(new Set());
+    } else {
+      setSelectedJobIds(new Set(jobPostings.map(j => j.id)));
+    }
+    setSelectAllJobs(!selectAllJobs);
+  };
+
+  const handleToggleJob = (jobId: string) => {
+    setSelectedJobIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleDeleteSelectedJobs = async () => {
+    if (selectedJobIds.size === 0) {
+      alert('삭제할 목표를 선택해주세요.');
+      return;
+    }
+
+    if (confirm(`선택한 ${selectedJobIds.size}개의 목표를 삭제하시겠습니까?`)) {
+      const idsToDelete = Array.from(selectedJobIds);
+      
+      // UI에서 먼저 제거
+      setJobPostings(prev => prev.filter(j => !selectedJobIds.has(j.id)));
+      
+      // localStorage 업데이트
+      const updatedJobs = jobPostings.filter(j => !selectedJobIds.has(j.id));
+      localStorage.setItem('jobPostings', JSON.stringify(updatedJobs));
+      
+      // 백엔드에서 목표 삭제 (구현된 경우)
+      for (const jobId of idsToDelete) {
+        try {
+          await apiPost(`/goals/${jobId}/delete`, {});
+        } catch (error) {
+          console.error(`목표 ${jobId} 삭제 실패:`, error);
+        }
+      }
+      
+      setSelectedJobIds(new Set());
+      setSelectAllJobs(false);
+      
+      // 관련 태스크도 삭제
+      setDailyTasks(prev => prev.filter(t => !idsToDelete.includes(t.id)));
     }
   };
 
@@ -474,42 +658,90 @@ export default function RoadmapPage() {
           </div>
           <div className="bg-white rounded-lg shadow-sm mb-6">
             <div className="border-b px-4 py-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Task List</h2>
-              <span className="text-xs text-gray-500">드래그하여 캘린더에 추가하세요</span>
+              <h2 className="text-lg font-bold">Task List ({dailyTasks.length})</h2>
+              <div className="flex items-center gap-2">
+                {selectedTaskIds.size > 0 && (
+                  <button
+                    onClick={handleDeleteSelectedTasks}
+                    className="text-xs px-3 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    선택 삭제 ({selectedTaskIds.size})
+                  </button>
+                )}
+                <span className="text-xs text-gray-500">드래그하여 캘린더에 추가하세요</span>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-2 text-left w-8"><input type="checkbox" className="rounded" /></th>
+                    <th className="px-4 py-2 text-left w-8">
+                      <input 
+                        type="checkbox" 
+                        className="rounded"
+                        checked={selectAllTasks}
+                        onChange={handleToggleAllTasks}
+                      />
+                    </th>
                     <th className="px-4 py-2 text-left font-medium">구분</th>
+                    <th className="px-4 py-2 text-left font-medium">우대/필수</th>
                     <th className="px-4 py-2 text-left font-medium">내용</th>
                     <th className="px-4 py-2 text-left font-medium">일정</th>
                     <th className="px-4 py-2 text-left font-medium w-20">관리</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dailyTasks.map(task => (
-                    <tr 
-                      key={task.id} 
-                      className="border-b hover:bg-gray-50 cursor-move"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task)}
-                    >
-                      <td className="px-4 py-3"><input type="checkbox" className="rounded" /></td>
-                      <td className="px-4 py-3"><span className="inline-block px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">{task.category}</span></td>
-                      <td className="px-4 py-3">{task.title}</td>
-                      <td className="px-4 py-3 text-gray-600">{task.dateRange}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="text-red-500 hover:text-red-700 text-xs"
-                        >
-                          삭제
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {dailyTasks.map(task => {
+                    const isRequired = task.priority === 'required' || task.priority === '필수';
+                    const isPreferred = task.priority === 'preferred' || task.priority === '우대';
+                    
+                    return (
+                      <tr 
+                        key={task.id} 
+                        className={`border-b hover:bg-gray-50 cursor-move ${selectedTaskIds.has(task.id) ? 'bg-blue-50' : ''}`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, task)}
+                      >
+                        <td className="px-4 py-3">
+                          <input 
+                            type="checkbox" 
+                            className="rounded"
+                            checked={selectedTaskIds.has(task.id)}
+                            onChange={() => handleToggleTask(task.id)}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">
+                            {task.category}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
+                            isRequired 
+                              ? 'bg-red-100 text-red-700 border border-red-300' 
+                              : isPreferred 
+                              ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {isRequired ? '필수' : isPreferred ? '우대' : task.priority || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{task.title}</td>
+                        <td className="px-4 py-3 text-gray-600">{task.dateRange}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="text-red-500 hover:text-red-700 text-xs"
+                          >
+                            삭제
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -517,20 +749,37 @@ export default function RoadmapPage() {
           <div className="bg-white rounded-lg shadow-sm">
             <div className="border-b px-4 py-3 flex items-center justify-between">
               <h2 className="text-lg font-bold">Job ({jobPostings.length})</h2>
-              <button 
-                onClick={loadGoalJobs}
-                className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                새로고침
-              </button>
+              <div className="flex items-center gap-2">
+                {selectedJobIds.size > 0 && (
+                  <button
+                    onClick={handleDeleteSelectedJobs}
+                    className="text-xs px-3 py-1.5 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    선택 삭제 ({selectedJobIds.size})
+                  </button>
+                )}
+                <button 
+                  onClick={loadGoalJobs}
+                  className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  새로고침
+                </button>
+              </div>
             </div>
             <div className="px-4 py-3 border-b flex items-center gap-3">
-              <button className="text-xs px-3 py-1.5 bg-primary text-white rounded hover:bg-primary/90">전체</button>
-              <button className="text-xs px-3 py-1.5 hover:bg-gray-100 rounded">필수요건</button>
-              <button className="text-xs px-3 py-1.5 hover:bg-gray-100 rounded">우대사항</button>
+              <input 
+                type="checkbox" 
+                className="rounded"
+                checked={selectAllJobs}
+                onChange={handleToggleAllJobs}
+              />
+              <span className="text-xs font-medium text-gray-600">전체 선택</span>
             </div>
             <div className="p-4">
               {loading ? (
@@ -548,11 +797,21 @@ export default function RoadmapPage() {
                 </div>
               ) : (
                 jobPostings.map(job => (
-                  <div key={job.id} className="border rounded-lg p-4 mb-3 hover:shadow-md transition-shadow">
+                  <div 
+                    key={job.id} 
+                    className={`border rounded-lg p-4 mb-3 hover:shadow-md transition-shadow ${
+                      selectedJobIds.has(job.id) ? 'bg-blue-50 border-blue-300' : ''
+                    }`}
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <input type="checkbox" className="rounded" />
+                          <input 
+                            type="checkbox" 
+                            className="rounded"
+                            checked={selectedJobIds.has(job.id)}
+                            onChange={() => handleToggleJob(job.id)}
+                          />
                           <h3 className="font-medium text-sm">{job.title}</h3>
                         </div>
                         <p className="text-xs text-gray-600 ml-6">{job.company}</p>
@@ -722,7 +981,7 @@ export default function RoadmapPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => addRequirementToSchedule(req.description, selectedJob.title)}
+                              onClick={() => addRequirementToSchedule(req.description, selectedJob.title, 'required')}
                               className="flex-shrink-0 text-xs px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-1 whitespace-nowrap"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -766,7 +1025,7 @@ export default function RoadmapPage() {
                               </div>
                             </div>
                             <button
-                              onClick={() => addRequirementToSchedule(req.description, selectedJob.title)}
+                              onClick={() => addRequirementToSchedule(req.description, selectedJob.title, 'preferred')}
                               className="flex-shrink-0 text-xs px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-1 whitespace-nowrap"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
