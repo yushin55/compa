@@ -157,6 +157,30 @@ async def delete_task(id: int, x_user_id: str = Header(...)):
         )
 
 
+@router.post("/tasks/{id}/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task_post(id: int, x_user_id: str = Header(...)):
+    """업무 삭제 (POST 방식 - 프론트엔드 호환)"""
+    try:
+        existing = supabase.table("tasks").select("id").eq("id", id).eq("user_id", x_user_id).execute()
+        
+        if not existing.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "업무를 찾을 수 없습니다", "code": "NOT_FOUND"}
+            )
+        
+        supabase.table("tasks").delete().eq("id", id).execute()
+        return None
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": str(e), "code": "UNAUTHORIZED"}
+        )
+
+
 @router.patch("/tasks/{id}/complete", response_model=Task)
 async def complete_task(id: int, x_user_id: str = Header(...)):
     """업무 완료 처리"""
