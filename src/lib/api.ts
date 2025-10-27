@@ -46,28 +46,53 @@ export const apiRequest = async <T>(
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = getHeaders();
   
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...headers,
-      ...options.headers,
-    },
-  });
+  console.log(`[API Request] ${options.method || 'GET'} ${url}`);
+  console.log('[API Headers]', headers);
+  if (options.body) {
+    console.log('[API Body]', options.body);
+  }
   
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      error: '요청 처리 중 오류가 발생했습니다',
-      code: 'UNKNOWN_ERROR',
-    }));
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+    });
+    
+    console.log(`[API Response] Status: ${response.status} ${response.statusText}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API Error Response]', errorText);
+      
+      let error;
+      try {
+        error = JSON.parse(errorText);
+      } catch {
+        error = {
+          error: errorText || '요청 처리 중 오류가 발생했습니다',
+          code: 'UNKNOWN_ERROR',
+          status: response.status
+        };
+      }
+      
+      throw new Error(`API Error (${response.status}): ${error.detail || error.error || error.message || errorText}`);
+    }
+    
+    // 204 No Content인 경우 빈 객체 반환
+    if (response.status === 204) {
+      return {} as T;
+    }
+    
+    const data = await response.json();
+    console.log('[API Response Data]', data);
+    return data;
+  } catch (error) {
+    console.error('[API Request Failed]', error);
     throw error;
   }
-  
-  // 204 No Content인 경우 빈 객체 반환
-  if (response.status === 204) {
-    return {} as T;
-  }
-  
-  return response.json();
 };
 
 // GET 요청

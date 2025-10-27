@@ -587,19 +587,35 @@ export default function GoalSettingPage() {
   const generateAutoPlan = async () => {
     if (!selectedJob) return;
     
+    const userId = getUserId();
+    if (!userId) {
+      alert('로그인이 필요합니다.');
+      router.push('/login');
+      return;
+    }
+    
     setGeneratingPlan(true);
     try {
       console.log('자동 계획 생성 시작:', selectedJob);
+      console.log('사용자 ID:', userId);
+      console.log('공고 ID:', selectedJob.id, '타입:', typeof selectedJob.id);
       
       // 1. 먼저 목표 생성 (이미 있으면 기존 목표 사용)
-      const goal = await apiPost(`/goals/from-job-posting/${selectedJob.id}`, {
+      const goal: any = await apiPost(`/goals/from-job-posting/${selectedJob.id}`, {
         target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       });
       
       console.log('목표 생성 완료:', goal);
       
       // 2. 선택된 추천 항목을 태스크로 변환
-      const recommendedTasks = selectedRecommendations.map(id => {
+      type TaskData = {
+        title: string;
+        description: string;
+        category: string;
+        due_date: string;
+      };
+      
+      const recommendedTasks: TaskData[] = selectedRecommendations.map(id => {
         const contest = recommendedItems.contests.find(c => c.id === id);
         if (contest) {
           return {
@@ -631,7 +647,7 @@ export default function GoalSettingPage() {
         }
         
         return null;
-      }).filter(Boolean);
+      }).filter((task): task is TaskData => task !== null);
 
       // 3. 추천 항목이 있으면 태스크로 추가
       if (recommendedTasks.length > 0) {
@@ -671,8 +687,19 @@ export default function GoalSettingPage() {
       alert(`✅ 자동 계획이 생성되었습니다!\n- 목표: ${selectedJob.title}\n- 태스크: ${recommendedTasks.length}개\n\n로드맵 페이지에서 확인하세요.`);
       router.push('/roadmap');
     } catch (error) {
-      console.error('자동 계획 생성 실패:', error);
-      alert('❌ 계획 생성에 실패했습니다.\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+      console.error('자동 계획 생성 실패 상세:', error);
+      
+      let errorMessage = '알 수 없는 오류';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // 사용자 등록 안된 경우
+        if (errorMessage.includes('user') || errorMessage.includes('foreign key')) {
+          errorMessage = `사용자 등록이 필요합니다.\n\n백엔드에 사용자를 먼저 등록해주세요.\n사용자 ID: ${userId}`;
+        }
+      }
+      
+      alert(`❌ 계획 생성에 실패했습니다.\n\n${errorMessage}\n\n콘솔(F12)에서 자세한 로그를 확인하세요.`);
     } finally {
       setGeneratingPlan(false);
     }
