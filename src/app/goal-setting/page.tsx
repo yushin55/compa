@@ -616,7 +616,7 @@ export default function GoalSettingPage() {
           
           try {
             // 기존 목표 목록 가져오기
-            const goals = await apiGet<any[]>('/goals/list');
+            const goals = await apiGet<any[]>('/goals');
             console.log('기존 목표 목록:', goals);
             
             if (goals.length > 0) {

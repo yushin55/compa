@@ -167,7 +167,7 @@ export default function RoadmapPage() {
       loadFromLocalStorage();
       
       // 백엔드 API에서 목표 목록 가져오기
-      const goals = await apiGet<any[]>('/goals/list').catch(() => []);
+      const goals = await apiGet<any[]>('/goals').catch(() => []);
       console.log('백엔드에서 가져온 목표들:', goals);
       
       if (goals.length > 0) {
