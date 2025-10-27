@@ -8,7 +8,12 @@ export default function Home() {
   const router = useRouter();
   const [isVisible, setIsVisible] = useState<{ [key: number]: boolean }>({});
   const [countStats, setCountStats] = useState({ early: 0, job: 0, skill: 0 });
+  const [openDetail, setOpenDetail] = useState<'an' | 'com' | 'cal' | null>(null);
+  const [hoverDetail, setHoverDetail] = useState<'an' | 'com' | 'cal' | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // 클릭으로 고정된 상세(openDetail)가 있으면 우선 사용하고, 없으면 호버 상태를 보여줍니다.
+  const activeDetail = openDetail ?? hoverDetail;
 
   useEffect(() => {
     // 이미 로그인한 경우 로드맵으로 리다이렉트
@@ -74,7 +79,8 @@ export default function Home() {
       {/* Header Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">미리 출근</h1>
+          <h1 className="text-2xl font-bold text-gray-900">스펙 체크
+          </h1>
           <button 
             onClick={() => router.push('/login')}
             className="px-6 py-2 bg-sky-500 text-white rounded-full hover:bg-sky-600 transition-colors font-medium"
@@ -412,30 +418,33 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h3 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              미리 출근이 제공하는 기능
+             스펙 체크가 제공하는 기능
             </h3>
             <p className="text-xl text-gray-600">
-              현직자가 설계한 실무 과제로 직무를 체험하세요
+              자신의 역량을 분석하여 스스로의 위치를 파악하고 계획해서 원하는 회사에 취직하세요
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* 기능 카드 1: 웹툰 스토리텔링 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* 남겨진 기능 카드 1: 웹툰 스토리텔링 */}
             <div
               data-index={5}
               className={`scroll-section group cursor-pointer transition-all duration-700 transform ${
                 isVisible[5] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
               }`}
+              onClick={() => setOpenDetail(openDetail === 'an' ? null : 'an')}
+              onMouseEnter={() => setHoverDetail('an')}
+              onMouseLeave={() => setHoverDetail(null)}
             >
               <div className="relative h-96 rounded-3xl bg-sky-100 p-8 flex flex-col justify-end overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105">
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
                 <div className="relative z-10">
                   <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-500">
-                    웹툰 형식의 직무 스토리텔링
+                    개인 맞춤 역량 분석
                   </h3>
                   <p className="text-gray-700 leading-relaxed group-hover:text-gray-100 transition-colors duration-500">
-                    현직자의 하루를 따라가며 실제 업무 환경과 프로세스를 생생하게 체험하세요.
+                    개인의 전공, 자격증, 어학 점수등을 바탕으로 역량 점수를 분석하고 자신의 위치를 확인해보세요 
                   </p>
                 </div>
 
@@ -443,36 +452,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 기능 카드 2: 맥락 기반 과제 */}
-            <div
-              data-index={6}
-              className={`scroll-section group cursor-pointer transition-all duration-700 transform ${
-                isVisible[6] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
-              }`}
-              style={{ transitionDelay: '100ms' }}
-            >
-              <div className="relative h-96 rounded-3xl bg-sky-100 p-8 flex flex-col justify-end overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="relative z-10">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-500">
-                    맥락 기반 미니 과제
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed group-hover:text-gray-100 transition-colors duration-500">
-                    실제 업무 상황 속에서 과제를 수행하며 실무 감각을 키울 수 있습니다.
-                  </p>
-                </div>
-
-                <div className="absolute top-6 right-6 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110"></div>
-              </div>
-            </div>
-
-            {/* 기능 카드 3: AI 스킬 분석 */}
+            {/* 남겨진 기능 카드 2: AI 스킬 분석 */}
             <div
               data-index={7}
               className={`scroll-section group cursor-pointer transition-all duration-700 transform ${
                 isVisible[7] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
               }`}
+              onClick={() => setOpenDetail(openDetail === 'com' ? null : 'com')}
+              onMouseEnter={() => setHoverDetail('com')}
+              onMouseLeave={() => setHoverDetail(null)}
               style={{ transitionDelay: '200ms' }}
             >
               <div className="relative h-96 rounded-3xl bg-sky-100 p-8 flex flex-col justify-end overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105">
@@ -480,10 +468,10 @@ export default function Home() {
                 
                 <div className="relative z-10">
                   <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-500">
-                    AI 스킬 갭 분석
+                    기업 추천 및 맞춤형 기업 분석
                   </h3>
                   <p className="text-gray-700 leading-relaxed group-hover:text-gray-100 transition-colors duration-500">
-                    목표 직무 대비 부족한 스킬을 수치로 시각화하여 학습 방향을 제시합니다.
+                    본인의 목표를 기반으로 다양한 기업을 알아보고 기업에 인재상에 맞는 역량을 준비해보세요
                   </p>
                 </div>
 
@@ -491,12 +479,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 기능 카드 4: 퀘스트 & 뱃지 */}
+            {/* 남겨진 기능 카드 3: 퀘스트 & 뱃지 */}
             <div
               data-index={8}
               className={`scroll-section group cursor-pointer transition-all duration-700 transform ${
                 isVisible[8] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
               }`}
+              onClick={() => setOpenDetail(openDetail === 'cal' ? null : 'cal')}
+              onMouseEnter={() => setHoverDetail('cal')}
+              onMouseLeave={() => setHoverDetail(null)}
               style={{ transitionDelay: '300ms' }}
             >
               <div className="relative h-96 rounded-3xl bg-sky-100 p-8 flex flex-col justify-end overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105">
@@ -504,58 +495,10 @@ export default function Home() {
                 
                 <div className="relative z-10">
                   <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-500">
-                    퀘스트 & 뱃지 시스템
+                    TASK 관리
                   </h3>
                   <p className="text-gray-700 leading-relaxed group-hover:text-gray-100 transition-colors duration-500">
-                    직무별 과제를 수행하고 검증 가능한 역량 뱃지와 경험치를 획득하세요.
-                  </p>
-                </div>
-
-                <div className="absolute top-6 right-6 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110"></div>
-              </div>
-            </div>
-
-            {/* 기능 카드 5: 현직자 멘토링 */}
-            <div
-              data-index={9}
-              className={`scroll-section group cursor-pointer transition-all duration-700 transform ${
-                isVisible[9] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
-              }`}
-              style={{ transitionDelay: '400ms' }}
-            >
-              <div className="relative h-96 rounded-3xl bg-sky-100 p-8 flex flex-col justify-end overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="relative z-10">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-500">
-                    현직자 멘토링
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed group-hover:text-gray-100 transition-colors duration-500">
-                    AMA와 포트폴리오 리뷰를 통해 현직자의 실질적인 조언을 받을 수 있습니다.
-                  </p>
-                </div>
-
-                <div className="absolute top-6 right-6 w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-110"></div>
-              </div>
-            </div>
-
-            {/* 기능 카드 6: 성장 대시보드 */}
-            <div
-              data-index={10}
-              className={`scroll-section group cursor-pointer transition-all duration-700 transform ${
-                isVisible[10] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'
-              }`}
-              style={{ transitionDelay: '500ms' }}
-            >
-              <div className="relative h-96 rounded-3xl bg-sky-100 p-8 flex flex-col justify-end overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 hover:scale-105">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div className="relative z-10">
-                  <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-colors duration-500">
-                    성장 대시보드
-                  </h3>
-                  <p className="text-gray-700 leading-relaxed group-hover:text-gray-100 transition-colors duration-500">
-                    주간 성장 스코어와 목표 직무 매칭도를 한눈에 파악할 수 있습니다.
+                    자신의 역량 및 추천 기업을 바탕으로 맞춤형 TASK를 제안 받고 관리해보세요
                   </p>
                 </div>
 
@@ -563,6 +506,90 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* 상세 설명 패널 (클릭 고정 또는 호버 프리뷰) */}
+          {activeDetail && (
+            <div className="max-w-8xl mx-auto mt-10 p-10 md:p-12 bg-white rounded-2xl shadow-lg text-lg">
+              <div className="flex justify-between items-start mb-6">
+                <h4 className="text-3xl md:text-4xl font-bold text-gray-900">
+                  {activeDetail === 'an' && '개인 맞춤 역량 분석 자세히 보기'}
+                  {activeDetail === 'com' && '기업 추천 및 맞춤형 기업 분석 자세히 보기'}
+                  {activeDetail === 'cal' && 'TASK 관리 자세히 보기'}
+                </h4>
+                <button
+                  onClick={() => { setOpenDetail(null); setHoverDetail(null); }}
+                  className="text-gray-600 hover:text-gray-800 text-lg px-3 py-2 border rounded-md"
+                  aria-label="닫기"
+                >
+                  닫기
+                </button>
+              </div>
+
+              {activeDetail === 'an' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+                  {/* 왼쪽: AN 메인 이미지 (더 크게) */}
+                  <div className="relative">
+                    <img src="/images/AN.png" alt="AN" className="w-full h-[36rem] object-cover rounded-lg shadow-lg" />
+                    
+                  </div>
+
+                  {/* 오른쪽: AN2 이미지 + 설명 (데스크톱에서 AN의 우측에 위치) */}
+                  <div className="flex flex-col">
+                    <img src="/images/AN2.png" alt="AN2" className="w-full h-[24rem] object-cover rounded-lg shadow-lg mb-6" />
+                    <div>
+                      <h5 className="text-xl font-semibold mb-4">기능 요약</h5>
+                      <p className="text-gray-700 mb-6">사용자의 이력과 입력 정보를 바탕으로 항목별 가중치를 적용해 종합 역량 점수를 계산합니다. 분석 결과는 시각화된 차트와 함께 개선 우선순위, 추천 TASK로 연결되어 실천까지 이어집니다.</p>
+                      <p className="text-gray-700">이미지에서 각 항목의 세부 점수를 확인할 수 있으며, 여기서는 기능의 동작 방식과 결과 활용 흐름(분석 → 우선순위 → 자동 TASK 생성)을 간결히 안내합니다.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeDetail === 'com' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+                  <div className="relative">
+                    <img src="/images/COM.png" alt="COM" className="w-full h-[36rem] object-cover rounded-lg shadow-lg" />
+                    <div className="absolute right-8 top-8 bg-white/90 text-gray-900 px-4 py-2 rounded-full font-semibold">매치율 78%</div>
+
+                  </div>
+                  <div>
+                    <img src="/images/COMPA.png" alt="COMPA" className="w-full h-[28rem] object-cover rounded-lg shadow mb-6" />
+                    <p className="text-gray-700 mb-6">매치율 기반으로 직무별·회사별 우선 준비 항목을 자동으로 도출합니다. 예: 포트폴리오 추가, 특정 자격증 취득, 어학 점수 향상 등.</p>
+                    <ul className="space-y-2 text-gray-700">
+                      <li className="flex items-start gap-2"><span className="text-sky-600 font-semibold">•</span> 자격증/스킬 보완 과제</li>
+                      <li className="flex items-start gap-2"><span className="text-sky-600 font-semibold">•</span> 포트폴리오 보강 과제</li>
+                      <li className="flex items-start gap-2"><span className="text-sky-600 font-semibold">•</span> 모의면접/시험 준비 스케줄</li>
+                    </ul>
+                    <p className="text-sm text-gray-500 mt-4">원클릭으로 이 계획을 TASK로 변환하여 캘린더에 배치할 수 있습니다.</p>
+                  </div>
+                </div>
+              )}
+
+              {activeDetail === 'cal' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+                  <div className="relative">
+                    <img src="/images/CAL.png" alt="CAL" className="w-full h-[36rem] object-cover rounded-lg shadow-lg" />
+                    <div className="absolute right-8 top-8 bg-white/90 text-gray-900 px-4 py-2 rounded-full font-semibold">진행률 42%</div>
+                  </div>
+                  <div>
+                    <h5 className="text-lg font-semibold mb-3">TASK 관리 및 진행 게이지</h5>
+                    <p className="text-gray-700 mb-4">자동 생성된 계획은 캘린더에 배치되며 사용자가 수행 상태를 업데이트할 때마다 전체 진행 게이지가 채워집니다. 아래는 예시 흐름입니다.</p>
+                    <ol className="list-decimal list-inside text-gray-700 space-y-2">
+                      <li>자동 생성된 TASK를 확인하고 캘린더에 배치</li>
+                      <li>작업을 수행하면 상태를 '완료'로 표시</li>
+                      <li>완료된 작업 비율에 따라 진행 게이지(프로필/목표 대비)가 상승</li>
+                    </ol>
+                    <div className="mt-6">
+                      <div className="w-full bg-gray-200 h-4 rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-400" style={{ width: '42%' }}></div>
+                      </div>
+                      <div className="text-sm text-gray-600 mt-2">진행률 예시: 42%</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -573,8 +600,8 @@ export default function Home() {
             지금 바로 시작하세요
           </h3>
           <p className="text-xl text-gray-600 mb-10">
-            출근하기 전에 미리 경험하는 직무 체험<br />
-            당신의 커리어를 미리 출근과 함께 시작하세요
+            취업이 걱정인 당신에게 적합한 맞춤형 비서<br />
+            당신의 커리어를 스펙 체크와 함께 시작하세요
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
@@ -597,9 +624,9 @@ export default function Home() {
       <footer className="bg-gray-900 text-white py-12 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-6">
-            <h3 className="text-2xl font-bold mb-2">미리 출근</h3>
+            <h3 className="text-2xl font-bold mb-2">스펙 체크</h3>
           </div>
-          <p className="text-gray-400 text-sm">출근하기 전에 미리 경험하는 직무 체험 플랫폼</p>
+          <p className="text-gray-400 text-sm">취업이 걱정인 당신에게 적합한 맞춤형 비서.</p>
         </div>
       </footer>
     </div>
