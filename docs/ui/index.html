@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스텝업(Step-Up) - 맞춤형 취업 로드맵 설계 서비스</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .landing-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .landing-content {
+            text-align: center;
+            color: white;
+            max-width: 800px;
+        }
+
+        .landing-logo {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        .landing-title {
+            font-size: 3.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .landing-slogan {
+            font-size: 1.5rem;
+            margin-bottom: 3rem;
+            opacity: 0.95;
+        }
+
+        .landing-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin: 3rem 0;
+            text-align: center;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 12px;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-description {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .landing-cta {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 3rem;
+        }
+
+        .landing-cta .btn {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+        }
+
+        .demo-note {
+            margin-top: 3rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .demo-note h3 {
+            margin-bottom: 1rem;
+        }
+
+        .demo-note ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .demo-note li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .demo-note li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .landing-title {
+                font-size: 2.5rem;
+            }
+
+            .landing-slogan {
+                font-size: 1.2rem;
+            }
+
+            .landing-features {
+                grid-template-columns: 1fr;
+            }
+
+            .landing-cta {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-container">
+        <div class="landing-content">
+            <div class="landing-logo">🎯</div>
+            <h1 class="landing-title">스텝업</h1>
+            <p class="landing-slogan">당신의 스펙, 목표를 향한 가장 스마트한 발걸음</p>
+
+            <div class="landing-features">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">스펙 분석</h3>
+                    <p class="feature-description">
+                        현재 역량을 객관적으로 분석하고 시각화하여 강점과 약점을 파악
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">목표 설정</h3>
+                    <p class="feature-description">
+                        실제 채용 공고 기반으로 명확한 목표를 설정하고 격차 분석
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <h3 class="feature-title">로드맵 관리</h3>
+                    <p class="feature-description">
+                        체계적인 일정 관리와 진행도 추적으로 목표 달성 지원
+                    </p>
+                </div>
+            </div>
+
+            <div class="landing-cta">
+                <a href="login.html" class="btn btn-secondary" style="background: white; color: var(--primary-color);">로그인</a>
+                <a href="register.html" class="btn btn-primary" style="background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border: 2px solid white;">회원가입</a>
+            </div>
+
+            <div class="demo-note">
+                <h3>📝 데모 사용 가이드</h3>
+                <ul>
+                    <li>회원가입/로그인 후 온보딩 프로세스를 통해 스펙을 입력하세요</li>
+                    <li>대시보드에서 현재 스펙을 시각적으로 확인할 수 있습니다</li>
+                    <li>목표 설정 페이지에서 샘플 채용 공고를 선택하여 로드맵을 생성하세요</li>
+                    <li>메인 로드맵 페이지에서 진행 상황을 관리하고 업무를 체크하세요</li>
+                    <li>모든 데이터는 브라우저 로컬 스토리지에 저장됩니다</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

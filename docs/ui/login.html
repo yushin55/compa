@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - 스텝업(Step-Up)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .login-links {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .login-links a {
+            color: var(--text-light);
+            text-decoration: none;
+        }
+
+        .login-links a:hover {
+            color: var(--primary-color);
+        }
+
+        .register-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-light);
+        }
+
+        .register-link a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>🎯 스텝업</h1>
+                <p>당신의 스펙, 목표를 향한 가장 스마트한 발걸음</p>
+            </div>
+
+            <form class="login-form" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="username">아이디</label>
+                    <input type="text" id="username" class="form-control" placeholder="아이디를 입력하세요" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">비밀번호</label>
+                    <input type="password" id="password" class="form-control" placeholder="비밀번호를 입력하세요" required>
+                </div>
+
+                <div class="login-links">
+                    <a href="#" onclick="alert('아이디/비밀번호 찾기 기능 (미구현)'); return false;">아이디/비밀번호 찾기</a>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">로그인</button>
+
+                <div class="register-link">
+                    아직 회원이 아니신가요? <a href="register.html">회원가입</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (username && password) {
+                // 간단한 데모용 로그인 처리
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('username', username);
+                
+                // 온보딩 완료 여부 확인
+                const hasCompletedOnboarding = localStorage.getItem('onboardingComplete');
+                
+                if (hasCompletedOnboarding === 'true') {
+                    window.location.href = 'roadmap.html';
+                } else {
+                    window.location.href = 'onboarding.html';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
