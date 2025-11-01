@@ -181,11 +181,14 @@ async def delete_task_post(id: int, x_user_id: str = Header(...)):
         )
 
 
-@router.patch("/tasks/{id}/complete", response_model=Task)
-async def complete_task(id: int, x_user_id: str = Header(...)):
-    """업무 완료 처리"""
+@router.patch("/tasks/{id}/complete")
+async def complete_task_patch(id: int, reflection_data: Optional[dict] = None, x_user_id: str = Header(...)):
+    """업무 완료 처리 (PATCH) - 회고 연동 지원"""
     try:
-        existing = supabase.table("tasks").select("id").eq("id", id).eq("user_id", x_user_id).execute()
+        from models.schemas import TaskCompleteWithReflection, Reflection
+        
+        # 태스크 조회
+        existing = supabase.table("tasks").select("*").eq("id", id).eq("user_id", x_user_id).execute()
         
         if not existing.data:
             raise HTTPException(
@@ -193,12 +196,149 @@ async def complete_task(id: int, x_user_id: str = Header(...)):
                 detail={"error": "업무를 찾을 수 없습니다", "code": "NOT_FOUND"}
             )
         
+        task = existing.data[0]
+        completed_date = datetime.utcnow()
+        
+        # 태스크 완료 처리
         result = supabase.table("tasks").update({
             "is_completed": True,
-            "completed_at": datetime.utcnow().isoformat()
+            "completed_at": completed_date.isoformat()
         }).eq("id", id).execute()
         
-        return result.data[0]
+        experience = None
+        
+        # 회고 데이터가 있으면 경험 생성
+        if reflection_data and not reflection_data.get("skip_reflection", False):
+            reflection = reflection_data.get("reflection")
+            
+            if reflection and reflection.get("learned"):
+                # URL 형식 검증
+                related_resources = reflection_data.get("related_resources", [])
+                for url in related_resources:
+                    if url and not url.startswith(("http://", "https://")):
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": f"잘못된 URL 형식: {url}", "code": "INVALID_URL"}
+                        )
+                
+                # 목표 ID로부터 카테고리 추론
+                category = "기타"
+                if task.get("goal_id"):
+                    goal = supabase.table("goals").select("job_title").eq("id", task["goal_id"]).execute()
+                    if goal.data:
+                        category = goal.data[0].get("job_title", "기타")
+                
+                experience_data = {
+                    "user_id": x_user_id,
+                    "task_id": id,
+                    "title": task.get("title", ""),
+                    "category": category,
+                    "completed_date": reflection_data.get("completed_date", completed_date).isoformat() if isinstance(reflection_data.get("completed_date"), datetime) else completed_date.isoformat(),
+                    "learned": reflection["learned"],
+                    "challenges": reflection.get("challenges"),
+                    "solutions": reflection.get("solutions"),
+                    "improvements": reflection.get("improvements"),
+                    "tags": reflection_data.get("tags", []),
+                    "related_resources": related_resources
+                }
+                
+                try:
+                    exp_result = supabase.table("experiences").insert(experience_data).execute()
+                    if exp_result.data:
+                        experience = exp_result.data[0]
+                except Exception as exp_error:
+                    # 경험 생성 실패해도 태스크 완료는 유지
+                    print(f"Experience creation failed: {exp_error}")
+        
+        return {
+            "task": result.data[0],
+            "experience": experience,
+            "message": "태스크가 완료되었습니다." + (" 회고가 저장되었습니다." if experience else " 회고는 나중에 작성할 수 있습니다.")
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"error": str(e), "code": "UNAUTHORIZED"}
+        )
+
+
+@router.post("/tasks/{id}/complete")
+async def complete_task_post(id: int, reflection_data: Optional[dict] = None, x_user_id: str = Header(...)):
+    """업무 완료 처리 (POST - 프론트엔드 호환, 회고 연동)"""
+    try:
+        from models.schemas import TaskCompleteWithReflection, Reflection
+        
+        # 태스크 조회
+        existing = supabase.table("tasks").select("*").eq("id", id).eq("user_id", x_user_id).execute()
+        
+        if not existing.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "업무를 찾을 수 없습니다", "code": "NOT_FOUND"}
+            )
+        
+        task = existing.data[0]
+        completed_date = datetime.utcnow()
+        
+        # 태스크 완료 처리
+        task_result = supabase.table("tasks").update({
+            "is_completed": True,
+            "completed_at": completed_date.isoformat()
+        }).eq("id", id).execute()
+        
+        experience = None
+        
+        # 회고 데이터가 있으면 경험 생성
+        if reflection_data and not reflection_data.get("skip_reflection", False):
+            reflection = reflection_data.get("reflection")
+            
+            if reflection and reflection.get("learned"):
+                # URL 형식 검증
+                related_resources = reflection_data.get("related_resources", [])
+                for url in related_resources:
+                    if url and not url.startswith(("http://", "https://")):
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail={"error": f"잘못된 URL 형식: {url}", "code": "INVALID_URL"}
+                        )
+                
+                # 목표 ID로부터 카테고리 추론
+                category = "기타"
+                if task.get("goal_id"):
+                    goal = supabase.table("goals").select("job_title").eq("id", task["goal_id"]).execute()
+                    if goal.data:
+                        category = goal.data[0].get("job_title", "기타")
+                
+                experience_data = {
+                    "user_id": x_user_id,
+                    "task_id": id,
+                    "title": task.get("title", ""),
+                    "category": category,
+                    "completed_date": reflection_data.get("completed_date", completed_date).isoformat() if isinstance(reflection_data.get("completed_date"), datetime) else completed_date.isoformat(),
+                    "learned": reflection["learned"],
+                    "challenges": reflection.get("challenges"),
+                    "solutions": reflection.get("solutions"),
+                    "improvements": reflection.get("improvements"),
+                    "tags": reflection_data.get("tags", []),
+                    "related_resources": related_resources
+                }
+                
+                try:
+                    exp_result = supabase.table("experiences").insert(experience_data).execute()
+                    if exp_result.data:
+                        experience = exp_result.data[0]
+                except Exception as exp_error:
+                    # 경험 생성 실패해도 태스크 완료는 유지
+                    print(f"Experience creation failed: {exp_error}")
+        
+        return {
+            "task": task_result.data[0],
+            "experience": experience,
+            "message": "태스크가 완료되었습니다." + (" 회고가 저장되었습니다." if experience else " 회고는 나중에 작성할 수 있습니다.")
+        }
     
     except HTTPException:
         raise

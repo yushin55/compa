@@ -243,3 +243,86 @@ class JobPosting(BaseModel):
 class TaskAutoGenerate(BaseModel):
     goal_id: Optional[int] = None
     requirements: List[str] = []
+
+
+# Step-Up 경험 아카이빙 시스템
+class Reflection(BaseModel):
+    learned: str = Field(..., min_length=10, description="배운 점 (필수, 최소 10자)")
+    challenges: Optional[str] = Field(None, description="어려웠던 점")
+    solutions: Optional[str] = Field(None, description="해결 과정")
+    improvements: Optional[str] = Field(None, description="개선점 및 다음 목표")
+
+
+class ExperienceCreate(BaseModel):
+    task_id: int
+    title: str
+    category: str
+    completed_date: datetime
+    reflection: Reflection
+    tags: List[str] = Field(default_factory=list, max_items=10)
+    related_resources: List[str] = Field(default_factory=list)
+
+
+class ExperienceUpdate(BaseModel):
+    reflection: Optional[Reflection] = None
+    tags: Optional[List[str]] = Field(None, max_items=10)
+    related_resources: Optional[List[str]] = None
+
+
+class Experience(BaseModel):
+    id: str
+    user_id: str
+    task_id: int
+    title: str
+    category: str
+    completed_date: datetime
+    learned: str
+    challenges: Optional[str] = None
+    solutions: Optional[str] = None
+    improvements: Optional[str] = None
+    tags: List[str] = []
+    related_resources: List[str] = []
+    created_at: datetime
+    updated_at: datetime
+
+
+class ExperienceStats(BaseModel):
+    total_experiences: int
+    total_tags: int
+    monthly_count: int
+    average_tags_per_experience: float
+    category_breakdown: dict
+    recent_trends: dict
+
+
+class TagInfo(BaseModel):
+    name: str
+    count: int
+    last_used: datetime
+
+
+class TagsResponse(BaseModel):
+    tags: List[TagInfo]
+    total_unique_tags: int
+
+
+class CalendarActivity(BaseModel):
+    date: str
+    count: int
+    experiences: List[dict]
+
+
+class CalendarResponse(BaseModel):
+    activities: List[CalendarActivity]
+    start_date: str
+    end_date: str
+    total_days_active: int
+    max_count_per_day: int
+
+
+class TaskCompleteWithReflection(BaseModel):
+    completed_date: Optional[datetime] = None
+    skip_reflection: bool = False
+    reflection: Optional[Reflection] = None
+    tags: Optional[List[str]] = Field(None, max_items=10)
+    related_resources: Optional[List[str]] = None
