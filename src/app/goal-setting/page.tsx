@@ -649,7 +649,7 @@ export default function GoalSettingPage() {
             description: `마감일: ${contest.deadline}\n${contest.keywords.join(', ')}`,
             category: '공모전',
             due_date: contest.deadline,
-            priority: 'preferred' as const
+            priority: 'preferred' as 'required' | 'preferred'
           };
         }
         
@@ -660,7 +660,7 @@ export default function GoalSettingPage() {
             description: `예상 기간: ${cert.period}, 난이도: ${cert.difficulty}\n${cert.keywords.join(', ')}`,
             category: '자격증',
             due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            priority: 'preferred' as const
+            priority: 'preferred' as 'required' | 'preferred'
           };
         }
         
@@ -671,12 +671,12 @@ export default function GoalSettingPage() {
             description: `목표: ${lang.target}, 시험: ${lang.test}`,
             category: '어학',
             due_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            priority: 'preferred' as const
+            priority: 'preferred' as 'required' | 'preferred'
           };
         }
         
         return null;
-      }).filter((task): task is TaskData => task !== null);
+      }).filter((task): task is TaskData => task !== null) as TaskData[];
 
       // 3. 추천 항목이 있으면 태스크로 추가
       if (recommendedTasks.length > 0 && goal && goal.id) {

@@ -78,6 +78,20 @@ export default function RoadmapPage() {
   const [selectAllTasks, setSelectAllTasks] = useState(false);
   const [selectAllJobs, setSelectAllJobs] = useState(false);
 
+  // 회고 모달 상태
+  const [showReflectionModal, setShowReflectionModal] = useState(false);
+  const [completedTaskForReflection, setCompletedTaskForReflection] = useState<DailyTask | null>(null);
+  const [reflection, setReflection] = useState({
+    learned: '',
+    challenges: '',
+    solutions: '',
+    improvements: ''
+  });
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
+  const [resources, setResources] = useState<string[]>([]);
+  const [resourceInput, setResourceInput] = useState('');
+
   // localStorage에서 데이터 로드하는 함수
   const loadFromLocalStorage = () => {
     const savedCalendarTasks = localStorage.getItem('calendarTasks');
@@ -404,7 +418,83 @@ export default function RoadmapPage() {
       // 실패해도 UI는 업데이트된 상태 유지
     }
 
+    // 회고 모달 표시
+    setCompletedTaskForReflection({...draggedTask, date: dateStr});
+    setShowReflectionModal(true);
+
     setDraggedTask(null);
+  };
+
+  const saveReflection = () => {
+    if (!completedTaskForReflection) return;
+
+    // 유효성 검사
+    if (!reflection.learned.trim()) {
+      alert('배운 점을 작성해주세요.');
+      return;
+    }
+
+    // 경험으로 저장
+    const experiences = JSON.parse(localStorage.getItem('experiences') || '[]');
+    const newExperience = {
+      id: Date.now().toString(),
+      taskId: completedTaskForReflection.id,
+      title: completedTaskForReflection.title,
+      category: completedTaskForReflection.category,
+      completedDate: completedTaskForReflection.date || new Date().toISOString().split('T')[0],
+      reflection: {
+        learned: reflection.learned,
+        challenges: reflection.challenges,
+        solutions: reflection.solutions,
+        improvements: reflection.improvements
+      },
+      tags,
+      relatedResources: resources
+    };
+
+    experiences.push(newExperience);
+    localStorage.setItem('experiences', JSON.stringify(experiences));
+
+    // 초기화
+    setReflection({ learned: '', challenges: '', solutions: '', improvements: '' });
+    setTags([]);
+    setResources([]);
+    setTagInput('');
+    setResourceInput('');
+    setShowReflectionModal(false);
+    setCompletedTaskForReflection(null);
+
+    alert('회고가 저장되었습니다! "나의 경험"에서 확인하세요.');
+  };
+
+  const skipReflection = () => {
+    setReflection({ learned: '', challenges: '', solutions: '', improvements: '' });
+    setTags([]);
+    setResources([]);
+    setShowReflectionModal(false);
+    setCompletedTaskForReflection(null);
+  };
+
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()]);
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => {
+    setTags(tags.filter(t => t !== tag));
+  };
+
+  const addResource = () => {
+    if (resourceInput.trim() && !resources.includes(resourceInput.trim())) {
+      setResources([...resources, resourceInput.trim()]);
+      setResourceInput('');
+    }
+  };
+
+  const removeResource = (resource: string) => {
+    setResources(resources.filter(r => r !== resource));
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -1065,6 +1155,181 @@ export default function RoadmapPage() {
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
               >
                 닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 회고 작성 모달 */}
+      {showReflectionModal && completedTaskForReflection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* 모달 헤더 */}
+            <div className="p-8 border-b border-gray-200 bg-gray-50">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">태스크 완료</h2>
+                <p className="text-sm text-gray-600">경험을 회고로 남겨 자산화하세요</p>
+              </div>
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <p className="font-semibold text-gray-900">{completedTaskForReflection.title}</p>
+                <p className="text-sm text-gray-600 mt-1">{completedTaskForReflection.category} · {completedTaskForReflection.dateRange}</p>
+              </div>
+            </div>
+
+            {/* 모달 컨텐츠 */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="space-y-5">
+                {/* 배운 점 (필수) */}
+                <div>
+                  <label className="block text-sm font-bold text-text-dark mb-2">
+                    배운 점 <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={reflection.learned}
+                    onChange={(e) => setReflection({...reflection, learned: e.target.value})}
+                    placeholder="이 태스크를 통해 무엇을 배웠나요?"
+                    className="form-control min-h-[100px]"
+                    required
+                  />
+                </div>
+
+                {/* 어려웠던 점 */}
+                <div>
+                  <label className="block text-sm font-bold text-text-dark mb-2">
+                    어려웠던 점
+                  </label>
+                  <textarea
+                    value={reflection.challenges}
+                    onChange={(e) => setReflection({...reflection, challenges: e.target.value})}
+                    placeholder="어떤 부분이 어려웠나요?"
+                    className="form-control min-h-[80px]"
+                  />
+                </div>
+
+                {/* 해결 과정 */}
+                <div>
+                  <label className="block text-sm font-bold text-text-dark mb-2">
+                    해결 과정
+                  </label>
+                  <textarea
+                    value={reflection.solutions}
+                    onChange={(e) => setReflection({...reflection, solutions: e.target.value})}
+                    placeholder="어떻게 문제를 해결했나요?"
+                    className="form-control min-h-[80px]"
+                  />
+                </div>
+
+                {/* 개선점 */}
+                <div>
+                  <label className="block text-sm font-bold text-text-dark mb-2">
+                    개선점 및 다음 목표
+                  </label>
+                  <textarea
+                    value={reflection.improvements}
+                    onChange={(e) => setReflection({...reflection, improvements: e.target.value})}
+                    placeholder="다음에는 어떻게 개선할 수 있을까요?"
+                    className="form-control min-h-[80px]"
+                  />
+                </div>
+
+                {/* 태그 추가 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    기술 스택 & 태그
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      placeholder="예: React, TypeScript, API..."
+                      className="form-control flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={addTag}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      추가
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1.5 rounded-md bg-blue-100 text-blue-700 text-sm font-medium flex items-center gap-2 border border-blue-200"
+                      >
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="hover:text-red-600 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 관련 자료 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    관련 자료 (URL, 문서 등)
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={resourceInput}
+                      onChange={(e) => setResourceInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addResource())}
+                      placeholder="https://..."
+                      className="form-control flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={addResource}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                    >
+                      추가
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {resources.map((resource, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm"
+                      >
+                        <span className="flex-1 truncate text-gray-700">{resource}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeResource(resource)}
+                          className="text-red-500 hover:text-red-700 font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3 bg-gray-50">
+              <button
+                onClick={skipReflection}
+                className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+              >
+                나중에 작성
+              </button>
+              <button
+                onClick={saveReflection}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm hover:shadow-md transition-all"
+              >
+                회고 저장
               </button>
             </div>
           </div>

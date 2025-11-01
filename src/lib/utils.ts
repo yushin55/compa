@@ -51,3 +51,57 @@ export const isToday = (date: Date | string): boolean => {
     d.getDate() === today.getDate()
   );
 };
+
+// LocalStorage 유틸리티
+export const storage = {
+  // 데이터 가져오기
+  get: <T>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(`Error reading from localStorage key "${key}":`, error);
+      return defaultValue;
+    }
+  },
+
+  // 데이터 저장
+  set: <T>(key: string, value: T): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.error(`Error writing to localStorage key "${key}":`, error);
+    }
+  },
+
+  // 데이터 삭제
+  remove: (key: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing localStorage key "${key}":`, error);
+    }
+  },
+
+  // 모든 데이터 삭제
+  clear: (): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error('Error clearing localStorage:', error);
+    }
+  }
+};
+
+// LocalStorage 키 상수
+export const STORAGE_KEYS = {
+  EXPERIENCES: 'experiences',
+  JOB_POSTINGS: 'jobPostings',
+  CALENDAR_TASKS: 'calendarTasks',
+  DAILY_TASKS: 'dailyTasks',
+  SIDEBAR_SECTIONS: 'sidebarSections'
+} as const;

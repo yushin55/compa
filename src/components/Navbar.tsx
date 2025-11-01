@@ -66,6 +66,16 @@ export default function Navbar() {
             >
               목표 설정
             </Link>
+            <Link
+              href="/experience"
+              className={`px-3.5 py-1.5 rounded-lg font-semibold text-sm transition-all ${
+                pathname === '/experience' 
+                  ? 'text-primary bg-blue-50' 
+                  : 'text-text-gray hover:text-text-dark hover:bg-bg-light'
+              }`}
+            >
+              나의 경험
+            </Link>
             <button
               onClick={handleLogout}
               className="px-3.5 py-1.5 rounded-lg font-semibold text-sm text-text-gray hover:text-danger hover:bg-red-50 transition-all ml-1.5"
