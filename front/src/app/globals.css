@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body {
+    @apply text-text-dark bg-white;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+    line-height: 1.6;
+    letter-spacing: -0.005em;
+    min-height: 100vh;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+    letter-spacing: -0.02em;
+  }
+  
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Toss-style buttons */
+  .btn {
+    @apply px-8 py-4 rounded-xl font-bold text-body-1 transition-all duration-200 cursor-pointer;
+    letter-spacing: -0.005em;
+  }
+  
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark active:scale-98 shadow-toss hover:shadow-toss-hover;
+    transform: translateY(0);
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary-dark active:scale-98 shadow-toss hover:shadow-toss-hover;
+  }
+  
+  .btn-outline {
+    @apply bg-white border-2 border-border-color text-text-dark hover:bg-bg-light active:scale-98;
+  }
+  
+  .btn-danger {
+    @apply bg-danger text-white hover:brightness-110 active:scale-98;
+  }
+  
+  /* Toss-style cards */
+  .card {
+    @apply bg-white rounded-3xl p-10 shadow-toss-card transition-all duration-300 border border-border-color;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-toss-hover hover:-translate-y-1;
+  }
+  
+  .form-group {
+    @apply mb-6;
+  }
+  
+  .form-label {
+    @apply block mb-2 font-medium;
+  }
+  
+  /* Toss-style inputs */
+  .form-control {
+    @apply w-full px-5 py-4 border-2 border-border-color rounded-2xl focus:outline-none focus:border-primary transition-all bg-white text-body-1;
+  }
+  
+  .form-control:focus {
+    @apply shadow-toss;
+  }
+  
+  /* Toss-style badges */
+  .badge {
+    @apply inline-block px-4 py-2 rounded-full text-sm font-bold;
+    letter-spacing: -0.005em;
+  }
+  
+  /* Toss-style sections */
+  .section {
+    @apply py-24 px-6;
+  }
+  
+  .section-title {
+    @apply text-display-2 mb-6 text-text-dark;
+  }
+  
+  .section-subtitle {
+    @apply text-body-1 text-text-gray mb-16;
+  }
+  
+  /* Animation utilities */
+  .animate-on-scroll {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  }
+  
+  .animate-on-scroll.animated {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .badge-info {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  .alert {
+    @apply p-4 px-6 rounded-lg mb-6 border-l-4;
+  }
+  
+  .alert-success {
+    @apply bg-green-50 border-green-500 text-green-900;
+  }
+  
+  .alert-info {
+    @apply bg-blue-50 border-blue-500 text-blue-900;
+  }
+  
+  .alert-warning {
+    @apply bg-yellow-50 border-yellow-500 text-yellow-900;
+  }
+}
