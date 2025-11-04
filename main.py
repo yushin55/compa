@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, users, specs, goals, tasks, job_postings, progress, stats, experiences
+from routers import auth, users, specs, goals, tasks, job_postings, progress, stats, experiences, routines
 
 app = FastAPI(
     title="스텝업(Step-Up) API",
@@ -39,6 +39,7 @@ app.include_router(job_postings.router)
 app.include_router(progress.router)
 app.include_router(stats.router)
 app.include_router(experiences.router)
+app.include_router(routines.router)
 
 
 @app.get("/")

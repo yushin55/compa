@@ -326,3 +326,80 @@ class TaskCompleteWithReflection(BaseModel):
     reflection: Optional[Reflection] = None
     tags: Optional[List[str]] = Field(None, max_items=10)
     related_resources: Optional[List[str]] = None
+
+
+# 주간 루틴 시스템
+class WeeklyRoutineCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    category: Optional[str] = Field(None, max_length=100)
+    frequency: int = Field(..., ge=1, le=7, description="주 몇 회 (1-7)")
+    color: str = Field("#3B82F6", pattern=r"^#[0-9A-Fa-f]{6}$")
+
+
+class WeeklyRoutineUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    category: Optional[str] = Field(None, max_length=100)
+    frequency: Optional[int] = Field(None, ge=1, le=7)
+    color: Optional[str] = Field(None, pattern=r"^#[0-9A-Fa-f]{6}$")
+
+
+class RoutineCompletion(BaseModel):
+    id: int
+    routine_id: int
+    completion_date: date
+
+
+class WeeklyRoutine(BaseModel):
+    id: int
+    user_id: str
+    title: str
+    category: Optional[str] = None
+    frequency: int
+    color: str
+    created_at: datetime
+    updated_at: datetime
+    completions: List[RoutineCompletion] = []
+
+
+class RoutineCompleteRequest(BaseModel):
+    completion_date: date
+
+
+class WeeklyStatus(BaseModel):
+    routine_id: int
+    week_start: str
+    week_end: str
+    target_count: int
+    completed_count: int
+    is_success: bool
+    progress: float
+
+
+class CompletionWithDay(BaseModel):
+    date: str
+    day_of_week: int
+
+
+class RoutineStats(BaseModel):
+    routine_id: int
+    title: str
+    frequency: int
+    color: str
+    completed_count: int
+    is_success: bool
+    progress: float
+    completions: List[CompletionWithDay]
+
+
+class WeeklyStatsSummary(BaseModel):
+    total_routines: int
+    success_count: int
+    in_progress_count: int
+    total_completions: int
+
+
+class WeeklyStatsResponse(BaseModel):
+    week_start: str
+    week_end: str
+    routines: List[RoutineStats]
+    summary: WeeklyStatsSummary
