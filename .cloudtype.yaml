@@ -1,29 +1,18 @@
 name: stepup-api
-description: 스텝업(Step-Up) 취업 로드맵 설계 서비스 API
-
-# 빌드 설정
-build:
-  type: python
-  base_directory: .
-  
-# 실행 설정
-run:
-  command: uvicorn main:app --host 0.0.0.0 --port $PORT
-  
-# 환경 변수 (Cloudtype 대시보드에서 설정 필요)
-env:
-  - name: SUPABASE_URL
-    value: ""  # Cloudtype 대시보드에서 설정
-  - name: SUPABASE_KEY
-    value: ""  # Cloudtype 대시보드에서 설정
-  
-# 헬스체크
-health_check:
-  path: /health
-  interval: 30
-  timeout: 10
-  
-# 리소스 설정
-resources:
-  cpu: 0.25
-  memory: 512
+app: python@3.11
+options:
+  ports: 8000
+  start: uvicorn main:app --host 0.0.0.0 --port $PORT
+  env:
+    - name: SUPABASE_URL
+      value: https://xyrbiuogwtmcjwqkojrb.supabase.co
+    - name: SUPABASE_KEY
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5cmJpdW9nd3RtY2p3cWtvanJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxOTA5NDUsImV4cCI6MjA3NDc2Njk0NX0.AFau_18T-iVIc9gIGoTbvOhq42H8VDfpJ0rKvmHfAHA
+    - name: CORS_ORIGINS
+      value: "*"
+  buildenv: []
+  install: pip install -r requirements.txt
+context:
+  git:
+    url: https://github.com/Same-Ta/conpanion.git
+    branch: back
