@@ -23,6 +23,7 @@ type CalendarTask = {
   id: string;
   title: string;
   date: string;
+  isCompleted?: boolean; // 체크박스 완료 상태
 };
 
 type DailyTask = {
@@ -32,6 +33,16 @@ type DailyTask = {
   dateRange: string;
   date?: string;
   priority?: 'required' | 'preferred' | string; // 필수/우대 구분
+};
+
+type WeeklyRoutine = {
+  id: string;
+  title: string;
+  category: string;
+  frequency: number; // 주 몇 회 (1-7)
+  color: string; // 루틴 색상
+  completions: { [date: string]: boolean }; // 날짜별 완료 상태
+  isRoutine: true; // 루틴 태스크 구분용
 };
 
 type JobPosting = {
@@ -92,12 +103,34 @@ export default function RoadmapPage() {
   const [resources, setResources] = useState<string[]>([]);
   const [resourceInput, setResourceInput] = useState('');
 
+  // 주간 뷰 관련 상태
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+  const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [newTaskData, setNewTaskData] = useState({
+    title: '',
+    category: '',
+    date: '',
+    priority: 'preferred'
+  });
+
+  // 루틴 관련 상태
+  const [weeklyRoutines, setWeeklyRoutines] = useState<WeeklyRoutine[]>([]);
+  const [showAddRoutineModal, setShowAddRoutineModal] = useState(false);
+  const [newRoutineData, setNewRoutineData] = useState({
+    title: '',
+    category: '',
+    frequency: 3,
+    color: '#3B82F6'
+  });
+
   // localStorage에서 데이터 로드하는 함수
   const loadFromLocalStorage = () => {
     const savedCalendarTasks = localStorage.getItem('calendarTasks');
     const savedDailyTasks = localStorage.getItem('dailyTasks');
     const savedSidebarSections = localStorage.getItem('sidebarSections');
     const savedJobPostings = localStorage.getItem('jobPostings');
+    const savedWeeklyRoutines = localStorage.getItem('weeklyRoutines');
     
     if (savedCalendarTasks) setCalendarTasks(JSON.parse(savedCalendarTasks));
     if (savedDailyTasks) setDailyTasks(JSON.parse(savedDailyTasks));
@@ -107,6 +140,7 @@ export default function RoadmapPage() {
       console.log('로드된 공고:', jobs);
       setJobPostings(jobs);
     }
+    if (savedWeeklyRoutines) setWeeklyRoutines(JSON.parse(savedWeeklyRoutines));
   };
 
   // 초기 로드
@@ -179,6 +213,10 @@ export default function RoadmapPage() {
   useEffect(() => {
     localStorage.setItem('jobPostings', JSON.stringify(jobPostings));
   }, [jobPostings]);
+
+  useEffect(() => {
+    localStorage.setItem('weeklyRoutines', JSON.stringify(weeklyRoutines));
+  }, [weeklyRoutines]);
 
   const loadGoalJobs = async () => {
     try {
@@ -389,38 +427,66 @@ export default function RoadmapPage() {
     const month = currentDate.getMonth();
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-    // 캘린더에 태스크 추가
-    const newCalendarTask: CalendarTask = {
-      id: draggedTask.id, // 동일한 ID 사용
-      title: draggedTask.title.substring(0, 15),
-      date: dateStr
-    };
+    // 루틴 태스크인지 확인
+    const isRoutineTask = draggedTask.priority === 'routine';
+    const routine = weeklyRoutines.find(r => r.id === draggedTask.id);
 
-    setCalendarTasks(prev => [...prev, newCalendarTask]);
-    
-    // Daily Task 업데이트
-    setDailyTasks(prev => 
-      prev.map(t => 
-        t.id === draggedTask.id 
-          ? { ...t, date: dateStr, dateRange: `${year}년 ${month + 1}월 ${day}일` }
-          : t
-      )
-    );
+    if (isRoutineTask && routine) {
+      // 루틴 처리: 캘린더에 추가하고 자동 완료 처리
+      const newCalendarTask: CalendarTask = {
+        id: `${routine.id}-${dateStr}`, // 날짜별 고유 ID
+        title: routine.title.substring(0, 15),
+        date: dateStr,
+        isCompleted: true // 자동 완료
+      };
 
-    // 백엔드 API 업데이트 (완료 처리)
-    try {
-      await apiPost(`/tasks/${draggedTask.id}/complete`, {
-        completed_at: dateStr
-      });
-      console.log('태스크 완료 처리됨:', draggedTask.id);
-    } catch (error) {
-      console.error('태스크 완료 처리 실패:', error);
-      // 실패해도 UI는 업데이트된 상태 유지
+      setCalendarTasks(prev => [...prev, newCalendarTask]);
+      
+      // 루틴 완료 상태 업데이트
+      setWeeklyRoutines(prev => prev.map(r => {
+        if (r.id === routine.id) {
+          const completions = { ...r.completions };
+          completions[dateStr] = true;
+          return { ...r, completions };
+        }
+        return r;
+      }));
+
+      alert(`✅ 루틴 "${routine.title}"이 ${dateStr}에 완료 처리되었습니다!`);
+      
+    } else {
+      // 일반 태스크 처리
+      const newCalendarTask: CalendarTask = {
+        id: draggedTask.id,
+        title: draggedTask.title.substring(0, 15),
+        date: dateStr
+      };
+
+      setCalendarTasks(prev => [...prev, newCalendarTask]);
+      
+      // Daily Task 업데이트
+      setDailyTasks(prev => 
+        prev.map(t => 
+          t.id === draggedTask.id 
+            ? { ...t, date: dateStr, dateRange: `${year}년 ${month + 1}월 ${day}일` }
+            : t
+        )
+      );
+
+      // 백엔드 API 업데이트 (완료 처리)
+      try {
+        await apiPost(`/tasks/${draggedTask.id}/complete`, {
+          completed_at: dateStr
+        });
+        console.log('태스크 완료 처리됨:', draggedTask.id);
+      } catch (error) {
+        console.error('태스크 완료 처리 실패:', error);
+      }
+
+      // 회고 모달 표시
+      setCompletedTaskForReflection({...draggedTask, date: dateStr});
+      setShowReflectionModal(true);
     }
-
-    // 회고 모달 표시
-    setCompletedTaskForReflection({...draggedTask, date: dateStr});
-    setShowReflectionModal(true);
 
     setDraggedTask(null);
   };
@@ -625,7 +691,30 @@ export default function RoadmapPage() {
 
   const handleDeleteCalendarTask = (taskId: string) => {
     if (confirm('이 일정을 삭제하시겠습니까?')) {
+      // 캘린더에서 제거
       setCalendarTasks(prev => prev.filter(t => t.id !== taskId));
+      
+      // 루틴 완료 기록에서 제거 (루틴-날짜 조합 ID인 경우)
+      if (taskId.includes('-')) {
+        const [routineId, dateStr] = taskId.split('-');
+        setWeeklyRoutines(prev => prev.map(routine => {
+          if (routine.id === routineId) {
+            const completions = { ...routine.completions };
+            delete completions[dateStr];
+            return { ...routine, completions };
+          }
+          return routine;
+        }));
+      } else {
+        // 일반 태스크인 경우 dailyTasks에서 날짜 정보만 제거 (태스크 자체는 유지)
+        setDailyTasks(prev => 
+          prev.map(t => 
+            t.id === taskId 
+              ? { ...t, date: undefined, dateRange: t.dateRange.includes('년') ? '' : t.dateRange }
+              : t
+          )
+        );
+      }
     }
   };
 
@@ -682,6 +771,150 @@ export default function RoadmapPage() {
     return calendarTasks.filter(task => task.date === dateStr);
   };
 
+  // 주간 뷰 관련 함수
+  const getWeekDates = () => {
+    const dates = [];
+    const start = new Date(currentWeekStart);
+    start.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      dates.push(date);
+    }
+    return dates;
+  };
+
+  const changeWeek = (delta: number) => {
+    const newDate = new Date(currentWeekStart);
+    newDate.setDate(newDate.getDate() + (delta * 7));
+    setCurrentWeekStart(newDate);
+  };
+
+  const getTasksForWeekDate = (date: Date) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return calendarTasks.filter(task => task.date === dateStr);
+  };
+
+  const handleAddTask = () => {
+    if (!newTaskData.title.trim() || !newTaskData.date) {
+      alert('일정 제목과 날짜를 입력해주세요.');
+      return;
+    }
+
+    const newTask: CalendarTask = {
+      id: Date.now().toString(),
+      title: newTaskData.title,
+      date: newTaskData.date
+    };
+
+    setCalendarTasks(prev => [...prev, newTask]);
+    
+    // 새로운 DailyTask도 추가
+    if (newTaskData.category) {
+      const newDailyTask: DailyTask = {
+        id: Date.now().toString() + '-daily',
+        title: newTaskData.title,
+        category: newTaskData.category,
+        dateRange: newTaskData.date,
+        date: newTaskData.date,
+        priority: newTaskData.priority
+      };
+      setDailyTasks(prev => [...prev, newDailyTask]);
+    }
+
+    // 모달 닫고 초기화
+    setShowAddTaskModal(false);
+    setNewTaskData({
+      title: '',
+      category: '',
+      date: '',
+      priority: 'preferred'
+    });
+  };
+
+  // 루틴 추가 - 태스크 목록에 추가됨
+  const handleAddRoutine = () => {
+    if (!newRoutineData.title.trim()) {
+      alert('루틴 제목을 입력해주세요.');
+      return;
+    }
+
+    const newRoutine: WeeklyRoutine = {
+      id: Date.now().toString(),
+      title: newRoutineData.title,
+      category: newRoutineData.category,
+      frequency: newRoutineData.frequency,
+      color: newRoutineData.color,
+      completions: {},
+      isRoutine: true
+    };
+
+    setWeeklyRoutines(prev => [...prev, newRoutine]);
+    
+    // 태스크 목록에도 추가 (드래그 가능하도록)
+    const newTask: DailyTask = {
+      id: newRoutine.id,
+      title: `🔁 ${newRoutine.title} (주${newRoutine.frequency}회)`,
+      category: newRoutine.category || '루틴',
+      dateRange: `주 ${newRoutine.frequency}회 목표`,
+      priority: 'routine' // 루틴 구분용
+    };
+    
+    setDailyTasks(prev => [...prev, newTask]);
+    
+    setShowAddRoutineModal(false);
+    setNewRoutineData({
+      title: '',
+      category: '',
+      frequency: 3,
+      color: '#3B82F6'
+    });
+  };
+
+  // 루틴 체크박스 토글
+  const toggleRoutineCompletion = (routineId: string, dateStr: string) => {
+    setWeeklyRoutines(prev => prev.map(routine => {
+      if (routine.id === routineId) {
+        const completions = { ...routine.completions };
+        completions[dateStr] = !completions[dateStr];
+        return { ...routine, completions };
+      }
+      return routine;
+    }));
+  };
+
+  // 루틴 삭제
+  const handleDeleteRoutine = (routineId: string) => {
+    if (confirm('이 루틴을 삭제하시겠습니까?')) {
+      setWeeklyRoutines(prev => prev.filter(r => r.id !== routineId));
+      // 태스크 목록에서도 삭제
+      setDailyTasks(prev => prev.filter(t => t.id !== routineId));
+    }
+  };
+
+  // 주간 루틴 달성 여부 계산
+  const getRoutineWeeklyStatus = (routine: WeeklyRoutine, weekStartDate: Date) => {
+    // 주간 날짜 배열 생성
+    const weekDates = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(weekStartDate);
+      date.setDate(date.getDate() + i);
+      return date;
+    });
+    
+    const completedCount = weekDates.filter(date => {
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      return routine.completions[dateStr];
+    }).length;
+
+    return {
+      completedCount,
+      targetCount: routine.frequency,
+      isSuccess: completedCount >= routine.frequency,
+      progress: Math.min(100, (completedCount / routine.frequency) * 100)
+    };
+  };
+
   const calendarDays = generateCalendar();
   const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -694,16 +927,72 @@ export default function RoadmapPage() {
             <div className="border-b px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-bold">Schedule</h2>
+                {/* 뷰 모드 전환 버튼 */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('month')}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                      viewMode === 'month' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    월간
+                  </button>
+                  <button
+                    onClick={() => setViewMode('week')}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                      viewMode === 'week' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    주간
+                  </button>
+                </div>
+              </div>
+              {/* 일정 추가 버튼 */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAddRoutineModal(true)}
+                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  루틴 추가
+                </button>
+                <button
+                  onClick={() => setShowAddTaskModal(true)}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  일정 추가
+                </button>
               </div>
             </div>
-            <div className="px-4 py-3 border-b flex items-center justify-between">
-              <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-gray-100 rounded"></button>
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</span>
-                <button onClick={() => setCurrentDate(new Date())} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">오늘</button>
-              </div>
-              <button onClick={() => changeMonth(1)} className="p-1 hover:bg-gray-100 rounded"></button>
-            </div>
+            
+            {viewMode === 'month' ? (
+              // 월간 뷰
+              <>
+                <div className="px-4 py-3 border-b flex items-center justify-between">
+                  <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-gray-100 rounded">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium">{currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월</span>
+                    <button onClick={() => setCurrentDate(new Date())} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">오늘</button>
+                  </div>
+                  <button onClick={() => changeMonth(1)} className="p-1 hover:bg-gray-100 rounded">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
             <div className="p-2">
               <div className="grid grid-cols-7 mb-1">
                 {weekDays.map((day, index) => (
@@ -745,6 +1034,149 @@ export default function RoadmapPage() {
                 })}
               </div>
             </div>
+              </>
+            ) : (
+              // 주간 뷰 (마이루틴 스타일)
+              <>
+                <div className="px-4 py-3 border-b flex items-center justify-between">
+                  <button onClick={() => changeWeek(-1)} className="p-1 hover:bg-gray-100 rounded">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium">
+                      {currentWeekStart.getFullYear()}년 {currentWeekStart.getMonth() + 1}월 {currentWeekStart.getDate()}일 ~ {(() => {
+                        const endDate = new Date(currentWeekStart);
+                        endDate.setDate(endDate.getDate() + 6);
+                        return `${endDate.getMonth() + 1}월 ${endDate.getDate()}일`;
+                      })()}
+                    </span>
+                    <button onClick={() => setCurrentWeekStart(new Date())} className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded">이번 주</button>
+                  </div>
+                  <button onClick={() => changeWeek(1)} className="p-1 hover:bg-gray-100 rounded">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="p-4">
+                  <div className="grid grid-cols-7 gap-3">
+                    {getWeekDates().map((date, index) => {
+                      const tasks = getTasksForWeekDate(date);
+                      const isToday = date.toDateString() === new Date().toDateString();
+                      const dayOfWeek = date.getDay();
+                      
+                      return (
+                        <div key={index} className="flex flex-col">
+                          {/* 요일 헤더 */}
+                          <div className={`text-center mb-3 ${isToday ? 'bg-blue-100 rounded-lg py-2' : 'py-2'}`}>
+                            <div className={`text-xs font-medium mb-1 ${
+                              dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-600'
+                            }`}>
+                              {weekDays[dayOfWeek]}
+                            </div>
+                            <div className={`text-lg font-bold ${
+                              isToday ? 'text-blue-600' : dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-900'
+                            }`}>
+                              {date.getDate()}
+                            </div>
+                          </div>
+                          
+                          {/* 일정 카드들 */}
+                          <div 
+                            className="flex-1 bg-gray-50 rounded-lg p-2 min-h-[400px] space-y-2"
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (!draggedTask) return;
+                              
+                              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                              
+                              const newCalendarTask: CalendarTask = {
+                                id: Date.now().toString(),
+                                title: draggedTask.title,
+                                date: dateStr
+                              };
+                              
+                              setCalendarTasks(prev => [...prev, newCalendarTask]);
+                              setDraggedTask(null);
+                            }}
+                          >
+                            {/* 루틴 표시 (드래그로 배치된 것만) */}
+                            {weeklyRoutines.map(routine => {
+                              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                              const isCompleted = routine.completions[dateStr] || false;
+                              
+                              // 이 날짜에 완료된 루틴만 표시
+                              if (!isCompleted) return null;
+                              
+                              return (
+                                <div
+                                  key={`${routine.id}-${dateStr}`}
+                                  className="bg-white rounded-lg p-3 shadow-sm border-2 transition-all group"
+                                  style={{ borderColor: routine.color }}
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <div 
+                                      className="w-4 h-4 rounded flex items-center justify-center text-white text-xs font-bold mt-0.5"
+                                      style={{ backgroundColor: routine.color }}
+                                    >
+                                      ✓
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs font-medium leading-relaxed text-gray-900">
+                                        🔁 {routine.title}
+                                      </p>
+                                      {routine.category && (
+                                        <span className="text-[10px] text-gray-500 mt-1 block">
+                                          {routine.category}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* 일반 일정 표시 */}
+                            {tasks.length === 0 && !weeklyRoutines.some(r => {
+                              const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                              return r.completions[dateStr];
+                            }) ? (
+                              <div className="text-center text-xs text-gray-400 mt-8">
+                                일정 없음
+                              </div>
+                            ) : (
+                              tasks.map(task => (
+                                <div
+                                  key={task.id}
+                                  className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+                                >
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-xs font-medium text-gray-900 flex-1 leading-relaxed">
+                                      {task.title}
+                                    </p>
+                                    <button
+                                      onClick={() => handleDeleteCalendarTask(task.id)}
+                                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity"
+                                    >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <div className="bg-white rounded-lg shadow-sm mb-6">
             <div className="border-b px-4 py-3 flex items-center justify-between">
@@ -836,6 +1268,77 @@ export default function RoadmapPage() {
               </table>
             </div>
           </div>
+
+          {/* 루틴 관리 섹션 */}
+          {weeklyRoutines.length > 0 && (
+            <div className="bg-white rounded-lg shadow-sm mb-6">
+              <div className="border-b px-4 py-3 flex items-center justify-between">
+                <h2 className="text-lg font-bold">내 루틴 ({weeklyRoutines.length})</h2>
+              </div>
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {weeklyRoutines.map(routine => {
+                  // 이번 주 달성률 계산 (드래그로 배치된 횟수 기준)
+                  const weekStatus = getRoutineWeeklyStatus(routine, currentWeekStart);
+
+                  return (
+                    <div
+                      key={routine.id}
+                      className="border-2 rounded-lg p-4 hover:shadow-md transition-all"
+                      style={{ borderColor: routine.color }}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-bold text-gray-900">🔁 {routine.title}</h3>
+                          {routine.category && (
+                            <span className="text-xs text-gray-500">{routine.category}</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleDeleteRoutine(routine.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">목표</span>
+                          <span className="font-semibold">주 {routine.frequency}회</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">이번 주 진행</span>
+                          <span className={`font-semibold ${weekStatus.isSuccess ? 'text-green-600' : ''}`} style={{ color: weekStatus.isSuccess ? '#16a34a' : routine.color }}>
+                            {weekStatus.completedCount} / {weekStatus.targetCount}
+                            {weekStatus.isSuccess && ' ✓'}
+                          </span>
+                        </div>
+                        {/* 달성 진행 바 */}
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${weekStatus.progress}%`,
+                              backgroundColor: weekStatus.isSuccess ? '#16a34a' : routine.color
+                            }}
+                          />
+                        </div>
+                        <div className="text-xs text-center text-gray-500">
+                          {weekStatus.isSuccess ? (
+                            <span className="text-green-600 font-semibold">✨ 이번 주 목표 달성! ✨</span>
+                          ) : (
+                            <span>{Math.round(weekStatus.progress)}% 달성 중</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow-sm">
             <div className="border-b px-4 py-3 flex items-center justify-between">
               <h2 className="text-lg font-bold">Job ({jobPostings.length})</h2>
@@ -1330,6 +1833,283 @@ export default function RoadmapPage() {
                 className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm hover:shadow-md transition-all"
               >
                 회고 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 일정 추가 모달 */}
+      {showAddTaskModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            {/* 모달 헤더 */}
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">새 일정 추가</h2>
+                <button
+                  onClick={() => {
+                    setShowAddTaskModal(false);
+                    setNewTaskData({
+                      title: '',
+                      category: '',
+                      date: '',
+                      priority: 'preferred'
+                    });
+                  }}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-all"
+                >
+                  <span className="text-gray-600 text-2xl">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 모달 컨텐츠 */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* 일정 제목 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    일정 제목 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newTaskData.title}
+                    onChange={(e) => setNewTaskData({...newTaskData, title: e.target.value})}
+                    placeholder="예: React 공부하기"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {/* 날짜 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    날짜 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={newTaskData.date}
+                    onChange={(e) => setNewTaskData({...newTaskData, date: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {/* 카테고리 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    카테고리 (선택)
+                  </label>
+                  <select
+                    value={newTaskData.category}
+                    onChange={(e) => setNewTaskData({...newTaskData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">선택 안함</option>
+                    <option value="백엔드">백엔드</option>
+                    <option value="프론트엔드">프론트엔드</option>
+                    <option value="AI">AI</option>
+                    <option value="데이터">데이터</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+
+                {/* 우선순위 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    우선순위
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setNewTaskData({...newTaskData, priority: 'required'})}
+                      className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                        newTaskData.priority === 'required'
+                          ? 'bg-red-100 text-red-700 border-2 border-red-300'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      필수
+                    </button>
+                    <button
+                      onClick={() => setNewTaskData({...newTaskData, priority: 'preferred'})}
+                      className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all ${
+                        newTaskData.priority === 'preferred'
+                          ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      우대
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => {
+                  setShowAddTaskModal(false);
+                  setNewTaskData({
+                    title: '',
+                    category: '',
+                    date: '',
+                    priority: 'preferred'
+                  });
+                }}
+                className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAddTask}
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold shadow-sm hover:shadow-md transition-all"
+              >
+                추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 루틴 추가 모달 */}
+      {showAddRoutineModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            {/* 모달 헤더 */}
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900">새 루틴 추가</h2>
+                <button
+                  onClick={() => {
+                    setShowAddRoutineModal(false);
+                    setNewRoutineData({
+                      title: '',
+                      category: '',
+                      frequency: 3,
+                      color: '#3B82F6'
+                    });
+                  }}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-all"
+                >
+                  <span className="text-gray-600 text-2xl">×</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 모달 컨텐츠 */}
+            <div className="p-6">
+              <div className="space-y-4">
+                {/* 루틴 제목 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    루틴 제목 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newRoutineData.title}
+                    onChange={(e) => setNewRoutineData({...newRoutineData, title: e.target.value})}
+                    placeholder="예: 운동하기, 코딩 공부"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+
+                {/* 카테고리 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    카테고리 (선택)
+                  </label>
+                  <select
+                    value={newRoutineData.category}
+                    onChange={(e) => setNewRoutineData({...newRoutineData, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="">선택 안함</option>
+                    <option value="운동">운동</option>
+                    <option value="학습">학습</option>
+                    <option value="독서">독서</option>
+                    <option value="프로젝트">프로젝트</option>
+                    <option value="건강">건강</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+
+                {/* 주당 횟수 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    주당 목표 횟수 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="7"
+                      value={newRoutineData.frequency}
+                      onChange={(e) => setNewRoutineData({...newRoutineData, frequency: parseInt(e.target.value)})}
+                      className="flex-1"
+                    />
+                    <span className="text-lg font-bold text-gray-900 min-w-[60px] text-center">
+                      주 {newRoutineData.frequency}회
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 루틴을 생성한 후 태스크 목록에서 원하는 날짜로 드래그해서 배치하세요!
+                  </p>
+                </div>
+
+                {/* 색상 선택 */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    루틴 색상
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={newRoutineData.color}
+                      onChange={(e) => setNewRoutineData({...newRoutineData, color: e.target.value})}
+                      className="w-12 h-12 rounded-lg border border-gray-300 cursor-pointer"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      {['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'].map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setNewRoutineData({...newRoutineData, color})}
+                          className={`w-8 h-8 rounded-lg border-2 ${
+                            newRoutineData.color === color ? 'border-gray-900' : 'border-gray-300'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 모달 푸터 */}
+            <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => {
+                  setShowAddRoutineModal(false);
+                  setNewRoutineData({
+                    title: '',
+                    category: '',
+                    frequency: 3,
+                    color: '#3B82F6'
+                  });
+                }}
+                className="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleAddRoutine}
+                className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold shadow-sm hover:shadow-md transition-all"
+              >
+                추가
               </button>
             </div>
           </div>
