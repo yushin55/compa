@@ -1,0 +1,37 @@
+name: step-up-frontend
+app: web
+buildenv: nodejs
+runtime: nodejs
+
+# 빌드 설정
+context:
+  git:
+    branch: master
+    repo: https://github.com/Same-Ta/conpanion
+
+# 빌드 명령어
+build:
+  command: npm install && npm run build
+  
+# 실행 명령어
+run:
+  command: npm start
+  
+# 환경 설정
+env:
+  - name: NODE_ENV
+    value: production
+  - name: PORT
+    value: "3000"
+
+# 리소스 설정
+resources:
+  type: basic # basic, standard, performance 중 선택
+  
+# 헬스체크
+healthcheck:
+  path: /
+  port: 3000
+  timeout: 30
+  interval: 30
+  retries: 3
