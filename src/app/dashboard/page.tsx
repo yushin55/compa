@@ -311,7 +311,7 @@ export default function DashboardPage() {
                     레이더 차트로 돌아가기
                   </button>
                   <h2 className="text-2xl font-bold text-text-dark mb-2">
-                    타이틀을 입력하세요
+                    역량 체크
                   </h2>
                   <p className="text-sm text-text-gray">
                     7개 분야별로 나의 스펙을 확인하고 부족한 부분을 채워나가세요
