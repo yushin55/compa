@@ -11,7 +11,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editMode, setEditMode] = useState<string | null>(null);
   const [showDetailedScores, setShowDetailedScores] = useState(false);
 
   useEffect(() => {
@@ -477,60 +476,42 @@ export default function DashboardPage() {
           </div>
 
           {/* 세부 정보 */}
-          <div className="space-y-5">
-            {/* 스펙 수정 안내 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-blue-900 mb-1">스펙 체크</h3>
-                  <p className="text-sm text-blue-800">
-                    각 섹션의 수정 버튼을 클릭하여 최신 정보로 업데이트하세요
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push('/onboarding')}
-                  className="px-3.5 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-all"
-                >
-                  전체 재입력
-                </button>
-              </div>
-            </div>
-
-            {/* 학력 */}
+          {/* 컴팩트한 스펙 카드 그리드 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* 학력 카드 */}
             {data.education && (
-              <div className="border border-border-color rounded-xl p-5 hover:shadow-toss-hover transition-all">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="text-lg font-bold text-text-dark">학력</h3>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getScoreLevel(data.radar_scores.education).color}`}>
+              <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 bg-blue-500 rounded-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900">학력</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${getScoreLevel(data.radar_scores.education).color}`}>
                       {getScoreLevel(data.radar_scores.education).label}
                     </span>
                   </div>
-                  <button
-                    onClick={() => router.push('/onboarding?step=1')}
-                    className="text-primary hover:underline text-sm font-medium"
-                  >
-                    수정
-                  </button>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-body-2 text-text-gray min-w-20">학교</span>
-                    <span className="text-body-1 text-text-dark font-medium">{data.education.school}</span>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">학교</span>
+                    <span className="font-semibold text-gray-900">{data.education.school}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-body-2 text-text-gray min-w-20">전공</span>
-                    <span className="text-body-1 text-text-dark">{data.education.major}</span>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">전공</span>
+                    <span className="text-gray-900">{data.education.major}</span>
                   </div>
                   {data.education.gpa && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-body-2 text-text-gray min-w-20">학점</span>
-                      <span className="text-body-1 text-text-dark">{data.education.gpa}</span>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">학점</span>
+                      <span className="text-gray-900">{data.education.gpa}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2">
-                    <span className="text-body-2 text-text-gray min-w-20">상태</span>
-                    <span className="text-body-1 text-text-dark">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">상태</span>
+                    <span className="text-gray-900">
                       {data.education.graduation_status === 'graduated' ? '졸업' : 
                        data.education.graduation_status === 'expected' ? '졸업예정' : '재학중'}
                     </span>
@@ -539,62 +520,60 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* 어학 */}
+            {/* 어학 카드 */}
             {data.languages.length > 0 && (
-              <div className="border border-border-color rounded-2xl p-6 hover:shadow-toss-hover transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-title-2 font-bold text-text-dark">어학 능력</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreLevel(data.radar_scores.language).color}`}>
+              <div className="bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 bg-green-500 rounded-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900">어학능력</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${getScoreLevel(data.radar_scores.language).color}`}>
                       {getScoreLevel(data.radar_scores.language).label}
                     </span>
                   </div>
-                  <button
-                    onClick={() => router.push('/onboarding?step=2')}
-                    className="text-primary hover:underline text-sm font-medium"
-                  >
-                    수정
-                  </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {data.languages.map((lang) => (
-                    <div key={lang.id} className="flex items-center justify-between p-3 bg-bg-light rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <span className="text-body-1 font-semibold text-text-dark">{lang.language_type}</span>
-                        <span className="text-body-1 text-text-gray">{lang.score}</span>
+                    <div key={lang.id} className="flex justify-between items-center p-2.5 bg-white rounded-lg">
+                      <span className="font-semibold text-sm text-gray-900">{lang.language_type}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700">{lang.score}</span>
+                        {lang.acquisition_date && (
+                          <span className="text-xs text-gray-500">{lang.acquisition_date}</span>
+                        )}
                       </div>
-                      {lang.acquisition_date && (
-                        <span className="text-sm text-text-light">{lang.acquisition_date}</span>
-                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* 자격증 */}
+            {/* 자격증 카드 */}
             {data.certificates.length > 0 && (
-              <div className="border border-border-color rounded-2xl p-6 hover:shadow-toss-hover transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-title-2 font-bold text-text-dark">자격증</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreLevel(data.radar_scores.certificate).color}`}>
+              <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-200 rounded-xl p-5 hover:shadow-lg transition-all">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 bg-purple-500 rounded-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900">자격증</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${getScoreLevel(data.radar_scores.certificate).color}`}>
                       {getScoreLevel(data.radar_scores.certificate).label}
                     </span>
                   </div>
-                  <button
-                    onClick={() => router.push('/onboarding?step=2')}
-                    className="text-primary hover:underline text-sm font-medium"
-                  >
-                    수정
-                  </button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {data.certificates.map((cert) => (
-                    <div key={cert.id} className="p-3 bg-bg-light rounded-xl">
-                      <div className="text-body-1 font-semibold text-text-dark mb-1">{cert.certificate_name}</div>
+                    <div key={cert.id} className="p-2.5 bg-white rounded-lg">
+                      <div className="font-semibold text-sm text-gray-900 mb-1">{cert.certificate_name}</div>
                       {cert.acquisition_date && (
-                        <div className="text-sm text-text-light">{cert.acquisition_date}</div>
+                        <div className="text-xs text-gray-500">{cert.acquisition_date}</div>
                       )}
                     </div>
                   ))}
@@ -602,42 +581,41 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* 프로젝트 */}
+            {/* 프로젝트 카드 */}
             {data.projects.length > 0 && (
-              <div className="border border-border-color rounded-2xl p-6 hover:shadow-toss-hover transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-title-2 font-bold text-text-dark">프로젝트 경험</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreLevel(data.radar_scores.project).color}`}>
+              <div className="bg-gradient-to-br from-red-50 to-white border border-red-200 rounded-xl p-5 hover:shadow-lg transition-all lg:col-span-2">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 bg-red-500 rounded-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900">프로젝트 경험</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${getScoreLevel(data.radar_scores.project).color}`}>
                       {getScoreLevel(data.radar_scores.project).label}
                     </span>
                   </div>
-                  <button
-                    onClick={() => router.push('/onboarding?step=3')}
-                    className="text-primary hover:underline text-sm font-medium"
-                  >
-                    수정
-                  </button>
                 </div>
-                <div className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-3">
                   {data.projects.map((proj) => (
-                    <div key={proj.id} className="p-4 bg-bg-light rounded-xl">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="text-body-1 font-bold text-text-dark">{proj.project_name}</h4>
+                    <div key={proj.id} className="p-3 bg-white rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-sm text-gray-900">{proj.project_name}</h4>
                         {proj.period && (
-                          <span className="text-sm text-text-light">{proj.period}</span>
+                          <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{proj.period}</span>
                         )}
                       </div>
                       {proj.role && (
-                        <div className="text-sm text-text-gray mb-2">{proj.role}</div>
+                        <div className="text-xs text-gray-600 mb-2">{proj.role}</div>
                       )}
                       {proj.description && (
-                        <p className="text-body-2 text-text-gray mb-2">{proj.description}</p>
+                        <p className="text-xs text-gray-600 mb-2 line-clamp-2">{proj.description}</p>
                       )}
                       {proj.tech_stack && (
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {proj.tech_stack.split(',').map((tech, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-white rounded text-xs text-text-gray">
+                          {proj.tech_stack.split(',').slice(0, 4).map((tech, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-700">
                               {tech.trim()}
                             </span>
                           ))}
@@ -649,37 +627,36 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* 대외활동 */}
+            {/* 대외활동 카드 */}
             {data.activities.length > 0 && (
-              <div className="border border-border-color rounded-2xl p-6 hover:shadow-toss-hover transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-title-2 font-bold text-text-dark">대외활동</h3>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getScoreLevel(data.radar_scores.activity).color}`}>
+              <div className="bg-gradient-to-br from-pink-50 to-white border border-pink-200 rounded-xl p-5 hover:shadow-lg transition-all lg:col-span-2">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 bg-pink-500 rounded-lg">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900">대외활동</h3>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${getScoreLevel(data.radar_scores.activity).color}`}>
                       {getScoreLevel(data.radar_scores.activity).label}
                     </span>
                   </div>
-                  <button
-                    onClick={() => router.push('/onboarding?step=3')}
-                    className="text-primary hover:underline text-sm font-medium"
-                  >
-                    수정
-                  </button>
                 </div>
-                <div className="space-y-3">
+                <div className="grid md:grid-cols-2 gap-3">
                   {data.activities.map((act) => (
-                    <div key={act.id} className="p-4 bg-bg-light rounded-xl">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="text-body-1 font-semibold text-text-dark">{act.activity_name}</h4>
+                    <div key={act.id} className="p-3 bg-white rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-sm text-gray-900">{act.activity_name}</h4>
                         {act.period && (
-                          <span className="text-sm text-text-light">{act.period}</span>
+                          <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{act.period}</span>
                         )}
                       </div>
                       {act.activity_type && (
-                        <div className="text-sm text-text-gray mb-2">{act.activity_type}</div>
+                        <div className="text-xs text-gray-600 mb-2">{act.activity_type}</div>
                       )}
                       {act.description && (
-                        <p className="text-body-2 text-text-gray">{act.description}</p>
+                        <p className="text-xs text-gray-600 line-clamp-2">{act.description}</p>
                       )}
                     </div>
                   ))}
@@ -687,9 +664,6 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-
-          {/* 스펙 섹션 */}
-          <SpecsSummarySection />
 
           {/* CTA */}
           <div className="mt-12 text-center bg-gradient-to-br from-blue-50 to-white rounded-2xl p-12 border border-blue-100">
@@ -709,87 +683,5 @@ export default function DashboardPage() {
         </div>
       </div>
     </>
-  );
-}
-
-// 간결한 스펙 섹션 컴포넌트 - "나의경험통계" 제거
-function SpecsSummarySection() {
-  const router = useRouter();
-  const specs = [
-    {
-      icon: '🎓',
-      title: '학력',
-      category: 'education',
-      description: '학위 및 학교 정보',
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50'
-    },
-    {
-      icon: '🌍',
-      title: '어학능력',
-      category: 'language',
-      description: '언어 및 시험 성적',
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      icon: '🏅',
-      title: '자격증',
-      category: 'certificate',
-      description: '보유 자격증',
-      color: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50'
-    },
-    {
-      icon: '💼',
-      title: '프로젝트 경험',
-      category: 'project',
-      description: '진행한 프로젝트',
-      color: 'from-red-500 to-red-600',
-      bgColor: 'bg-red-50'
-    },
-    {
-      icon: '🎯',
-      title: '대외활동',
-      category: 'activity',
-      description: '참여한 활동',
-      color: 'from-pink-500 to-pink-600',
-      bgColor: 'bg-pink-50'
-    }
-  ];
-
-  return (
-    <div className="mt-12">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-text-dark">내 스펙</h2>
-        <p className="text-sm text-text-gray mt-1">보유 역량 및 경험을 관리하세요</p>
-      </div>
-
-      {/* 스펙 카드 그리드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {specs.map((spec) => (
-          <div
-            key={spec.category}
-            onClick={() => router.push(`/${spec.category === 'activity' ? 'experience' : spec.category}`)}
-            className={`${spec.bgColor} rounded-xl p-4 border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group`}
-          >
-            <div className="flex flex-col h-full justify-between">
-              <div>
-                <div className="text-3xl mb-2">{spec.icon}</div>
-                <h3 className="font-semibold text-text-dark text-sm group-hover:text-gray-800 transition-colors">
-                  {spec.title}
-                </h3>
-                <p className="text-xs text-text-gray mt-1">{spec.description}</p>
-              </div>
-              <div className="mt-3 flex justify-end">
-                <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
