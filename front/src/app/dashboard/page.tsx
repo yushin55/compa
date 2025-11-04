@@ -688,8 +688,8 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* 경험 아카이브 섹션 */}
-          <ExperienceSection />
+          {/* 스펙 섹션 */}
+          <SpecsSummarySection />
 
           {/* CTA */}
           <div className="mt-12 text-center bg-gradient-to-br from-blue-50 to-white rounded-2xl p-12 border border-blue-100">
@@ -712,191 +712,83 @@ export default function DashboardPage() {
   );
 }
 
-// 경험 섹션 컴포넌트
-function ExperienceSection() {
+// 간결한 스펙 섹션 컴포넌트 - "나의경험통계" 제거
+function SpecsSummarySection() {
   const router = useRouter();
-  const [experiences, setExperiences] = useState<any[]>([]);
-
-  useEffect(() => {
-    const saved = storage.get<any[]>(STORAGE_KEYS.EXPERIENCES, []);
-    setExperiences(saved);
-  }, []);
-
-  if (experiences.length === 0) return null;
-
-  // 태그 통계
-  const allTags = experiences.flatMap(exp => exp.tags || []);
-  const tagCounts = allTags.reduce((acc, tag) => {
-    acc[tag] = (acc[tag] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const topTags = Object.entries(tagCounts)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, 10);
-
-  // 잔디 캘린더 데이터 (최근 3개월)
-  const grassData: Record<string, number> = {};
-  const today = new Date();
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(today.getMonth() - 3);
-
-  experiences.forEach(exp => {
-    const date = exp.completedDate;
-    grassData[date] = (grassData[date] || 0) + 1;
-  });
-
-  // 잔디 캘린더 날짜 배열 생성 (최근 12주)
-  const weeks: Date[][] = [];
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 83); // 12주 전
-  
-  for (let week = 0; week < 12; week++) {
-    const days: Date[] = [];
-    for (let day = 0; day < 7; day++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + week * 7 + day);
-      days.push(date);
+  const specs = [
+    {
+      icon: '🎓',
+      title: '학력',
+      category: 'education',
+      description: '학위 및 학교 정보',
+      color: 'from-blue-500 to-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      icon: '🌍',
+      title: '어학능력',
+      category: 'language',
+      description: '언어 및 시험 성적',
+      color: 'from-green-500 to-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      icon: '🏅',
+      title: '자격증',
+      category: 'certificate',
+      description: '보유 자격증',
+      color: 'from-purple-500 to-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    {
+      icon: '💼',
+      title: '프로젝트 경험',
+      category: 'project',
+      description: '진행한 프로젝트',
+      color: 'from-red-500 to-red-600',
+      bgColor: 'bg-red-50'
+    },
+    {
+      icon: '🎯',
+      title: '대외활동',
+      category: 'activity',
+      description: '참여한 활동',
+      color: 'from-pink-500 to-pink-600',
+      bgColor: 'bg-pink-50'
     }
-    weeks.push(days);
-  }
-
-  // 월별 경험 수
-  const monthlyData: Record<string, number> = {};
-  experiences.forEach(exp => {
-    const date = new Date(exp.completedDate);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-  });
+  ];
 
   return (
-    <div className="mt-12 space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold text-text-dark">나의 경험 통계</h3>
-        <button
-          onClick={() => router.push('/experience')}
-          className="text-primary hover:underline text-sm font-medium flex items-center gap-1"
-        >
-          전체 보기
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+    <div className="mt-12">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-text-dark">내 스펙</h2>
+        <p className="text-sm text-text-gray mt-1">보유 역량 및 경험을 관리하세요</p>
       </div>
 
-      {/* 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 border border-purple-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-purple-700 font-semibold mb-1">총 경험</p>
-              <p className="text-3xl font-bold text-purple-900">{experiences.length}</p>
-            </div>
-            <div className="p-3 bg-purple-500 rounded-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 border border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-700 font-semibold mb-1">기술 스택</p>
-              <p className="text-3xl font-bold text-blue-900">{Object.keys(tagCounts).length}</p>
-            </div>
-            <div className="p-3 bg-blue-500 rounded-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-700 font-semibold mb-1">이번 달</p>
-              <p className="text-3xl font-bold text-green-900">
-                {experiences.filter(exp => {
-                  const expDate = new Date(exp.completedDate);
-                  return expDate.getMonth() === today.getMonth() && 
-                         expDate.getFullYear() === today.getFullYear();
-                }).length}
-              </p>
-            </div>
-            <div className="p-3 bg-green-500 rounded-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 태그 클라우드 */}
-      <div className="bg-white rounded-2xl border border-border-color p-6">
-        <h4 className="text-lg font-bold text-text-dark mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-          </svg>
-          상위 기술 스택
-        </h4>
-        <div className="flex flex-wrap gap-2">
-          {topTags.map(([tag, count]) => {
-            const size = Math.min((count as number) * 2 + 12, 24);
-            return (
-              <span
-                key={tag}
-                className="px-3 py-1.5 rounded-lg bg-primary bg-opacity-10 text-primary font-medium hover:bg-primary hover:text-white transition-all cursor-pointer"
-                style={{ fontSize: `${size}px` }}
-              >
-                {tag} ({count as number})
-              </span>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 잔디 캘린더 */}
-      <div className="bg-white rounded-2xl border border-border-color p-6">
-        <h4 className="text-lg font-bold text-text-dark mb-4 flex items-center gap-2">
-          <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          경험 캘린더 (최근 12주)
-        </h4>
-        <div className="overflow-x-auto">
-          <div className="inline-flex gap-1">
-            {weeks.map((week, weekIdx) => (
-              <div key={weekIdx} className="flex flex-col gap-1">
-                {week.map((date, dayIdx) => {
-                  const dateStr = date.toISOString().split('T')[0];
-                  const count = grassData[dateStr] || 0;
-                  const intensity = count === 0 ? 'bg-gray-100' :
-                                   count === 1 ? 'bg-green-200' :
-                                   count === 2 ? 'bg-green-400' :
-                                   'bg-green-600';
-                  return (
-                    <div
-                      key={dayIdx}
-                      className={`w-3 h-3 rounded-sm ${intensity} transition-all hover:ring-2 hover:ring-primary cursor-pointer`}
-                      title={`${dateStr}: ${count}개 경험`}
-                    />
-                  );
-                })}
+      {/* 스펙 카드 그리드 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {specs.map((spec) => (
+          <div
+            key={spec.category}
+            onClick={() => router.push(`/${spec.category === 'activity' ? 'experience' : spec.category}`)}
+            className={`${spec.bgColor} rounded-xl p-4 border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group`}
+          >
+            <div className="flex flex-col h-full justify-between">
+              <div>
+                <div className="text-3xl mb-2">{spec.icon}</div>
+                <h3 className="font-semibold text-text-dark text-sm group-hover:text-gray-800 transition-colors">
+                  {spec.title}
+                </h3>
+                <p className="text-xs text-text-gray mt-1">{spec.description}</p>
               </div>
-            ))}
+              <div className="mt-3 flex justify-end">
+                <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-3 text-xs text-text-gray">
-            <span>적음</span>
-            <div className="w-3 h-3 rounded-sm bg-gray-100" />
-            <div className="w-3 h-3 rounded-sm bg-green-200" />
-            <div className="w-3 h-3 rounded-sm bg-green-400" />
-            <div className="w-3 h-3 rounded-sm bg-green-600" />
-            <span>많음</span>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );

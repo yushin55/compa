@@ -15,7 +15,17 @@ async def get_today_tasks(x_user_id: str = Header(...)):
         from datetime import date
         today = date.today()
         tasks = supabase.table("tasks").select("*").eq("user_id", x_user_id).eq("due_date", str(today)).eq("is_completed", False).execute()
-        return tasks.data or []
+        result = tasks.data or []
+        
+        # 중복 ID 제거 (같은 ID는 첫 번째만 유지)
+        seen_ids = set()
+        unique_tasks = []
+        for task in result:
+            if task.get("id") not in seen_ids:
+                seen_ids.add(task.get("id"))
+                unique_tasks.append(task)
+        
+        return unique_tasks
     
     except Exception as e:
         raise HTTPException(
@@ -45,7 +55,17 @@ async def get_tasks(
             query = query.eq("priority", priority)
         
         result = query.order("order_index").execute()
-        return result.data or []
+        tasks = result.data or []
+        
+        # 중복 ID 제거 (같은 ID는 첫 번째만 유지)
+        seen_ids = set()
+        unique_tasks = []
+        for task in tasks:
+            if task.get("id") not in seen_ids:
+                seen_ids.add(task.get("id"))
+                unique_tasks.append(task)
+        
+        return unique_tasks
     
     except Exception as e:
         raise HTTPException(

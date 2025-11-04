@@ -304,8 +304,20 @@ export default function RoadmapPage() {
             const tasks = await apiGet<any[]>(`/tasks?goal_id=${goal.id}`);
             console.log(`목표 ${goal.id}의 태스크:`, tasks);
             
+            // 중복 제거 (같은 ID는 한 번만 처리)
+            const seenTaskIds = new Set<string>();
+            
             // 태스크를 DailyTask 형식으로 변환
             tasks.forEach(task => {
+              const taskIdStr = String(task.id);
+              
+              // 이미 처리한 태스크는 스킵
+              if (seenTaskIds.has(taskIdStr)) {
+                console.warn(`중복된 태스크 ID 감지 및 제거: ${taskIdStr}`);
+                return;
+              }
+              seenTaskIds.add(taskIdStr);
+              
               // 백엔드 priority 값 변환: high -> required, medium/low -> preferred
               let frontendPriority: 'required' | 'preferred' = 'preferred';
               if (task.priority === 'high') {
@@ -318,7 +330,7 @@ export default function RoadmapPage() {
               }
               
               allTasks.push({
-                id: String(task.id),
+                id: taskIdStr,
                 title: task.title || task.description,
                 category: task.category || '학습',
                 dateRange: task.due_date ? new Date(task.due_date).toLocaleDateString('ko-KR') : '기한 없음',
@@ -329,10 +341,10 @@ export default function RoadmapPage() {
               // 완료된 태스크는 캘린더에도 추가
               if (task.is_completed && task.completed_at) {
                 setCalendarTasks(prev => {
-                  const exists = prev.some(t => t.id === String(task.id));
+                  const exists = prev.some(t => t.id === taskIdStr);
                   if (!exists) {
                     return [...prev, {
-                      id: String(task.id),
+                      id: taskIdStr,
                       title: task.title || task.description,
                       date: task.completed_at.split('T')[0]
                     }];
@@ -1015,7 +1027,7 @@ export default function RoadmapPage() {
                           <div className={`text-xs mb-1 ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-700'}`}>{day}</div>
                           {tasks.map(task => (
                             <div 
-                              key={task.id} 
+                              key={task.id}
                               className="text-[10px] bg-red-500 text-white rounded px-1 py-0.5 mb-0.5 truncate flex items-center justify-between group"
                             >
                               <span className="flex-1 truncate">{task.title}</span>

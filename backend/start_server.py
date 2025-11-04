@@ -16,4 +16,5 @@ if __name__ == "__main__":
         print("⚠️ WARNING: Environment variables not found")
     
     # Run without reload to avoid multiprocessing environment issues
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False)
+    print("🚀 Starting FastAPI server on http://127.0.0.1:8000")
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=False, access_log=True)
