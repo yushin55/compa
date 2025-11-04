@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import auth, users, specs, goals, tasks, job_postings, progress, stats, experiences, routines
@@ -22,9 +23,13 @@ app = FastAPI(
     }
 )
 
+# CORS 설정 (환경 변수로 관리)
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+print(f"🌐 CORS allowed origins: {CORS_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,  # 환경 변수로 관리
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
