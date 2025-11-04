@@ -1,0 +1,29 @@
+name: stepup-api
+description: 스텝업(Step-Up) 취업 로드맵 설계 서비스 API
+
+# 빌드 설정
+build:
+  type: python
+  base_directory: .
+  
+# 실행 설정
+run:
+  command: uvicorn main:app --host 0.0.0.0 --port $PORT
+  
+# 환경 변수 (Cloudtype 대시보드에서 설정 필요)
+env:
+  - name: SUPABASE_URL
+    value: ""  # Cloudtype 대시보드에서 설정
+  - name: SUPABASE_KEY
+    value: ""  # Cloudtype 대시보드에서 설정
+  
+# 헬스체크
+health_check:
+  path: /health
+  interval: 30
+  timeout: 10
+  
+# 리소스 설정
+resources:
+  cpu: 0.25
+  memory: 512
