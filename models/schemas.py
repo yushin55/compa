@@ -74,6 +74,12 @@ class LanguageCreate(BaseModel):
     acquisition_date: Optional[date] = None
 
 
+class LanguageUpdate(BaseModel):
+    language_type: Optional[str] = None
+    score: Optional[str] = None
+    acquisition_date: Optional[date] = None
+
+
 class Certificate(BaseModel):
     id: int
     user_id: str
@@ -85,6 +91,11 @@ class Certificate(BaseModel):
 
 class CertificateCreate(BaseModel):
     certificate_name: str
+    acquisition_date: Optional[date] = None
+
+
+class CertificateUpdate(BaseModel):
+    certificate_name: Optional[str] = None
     acquisition_date: Optional[date] = None
 
 

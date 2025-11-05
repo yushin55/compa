@@ -2,7 +2,7 @@ from fastapi import APIRouter, Header, HTTPException, status
 from typing import List, Optional
 from models.schemas import (
     UserSpec, UserSpecUpdate, Education, EducationUpdate,
-    Language, LanguageCreate, Certificate, CertificateCreate,
+    Language, LanguageCreate, LanguageUpdate, Certificate, CertificateCreate, CertificateUpdate,
     Project, ProjectCreate, ProjectUpdate,
     Activity, ActivityCreate, ActivityUpdate,
     DashboardData
@@ -159,6 +159,41 @@ async def create_language(lang_data: LanguageCreate, x_user_id: str = Header(...
         )
 
 
+@router.put("/languages/{id}", response_model=Language)
+async def update_language(id: int, lang_data: LanguageUpdate, x_user_id: str = Header(...)):
+    """어학 성적 수정"""
+    try:
+        update_data = {k: v for k, v in lang_data.dict().items() if v is not None}
+        
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "수정할 데이터가 없습니다", "code": "BAD_REQUEST"}
+            )
+        
+        if "acquisition_date" in update_data and update_data["acquisition_date"]:
+            update_data["acquisition_date"] = str(update_data["acquisition_date"])
+        
+        existing = supabase.table("languages").select("id").eq("id", id).eq("user_id", x_user_id).execute()
+        
+        if not existing.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "어학 성적을 찾을 수 없습니다", "code": "NOT_FOUND"}
+            )
+        
+        result = supabase.table("languages").update(update_data).eq("id", id).execute()
+        return result.data[0]
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "BAD_REQUEST"}
+        )
+
+
 @router.delete("/languages/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_language(id: int, x_user_id: str = Header(...)):
     """어학 성적 삭제"""
@@ -210,6 +245,41 @@ async def create_certificate(cert_data: CertificateCreate, x_user_id: str = Head
         result = supabase.table("certificates").insert(data).execute()
         return result.data[0]
     
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "BAD_REQUEST"}
+        )
+
+
+@router.put("/certificates/{id}", response_model=Certificate)
+async def update_certificate(id: int, cert_data: CertificateUpdate, x_user_id: str = Header(...)):
+    """자격증 수정"""
+    try:
+        update_data = {k: v for k, v in cert_data.dict().items() if v is not None}
+        
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "수정할 데이터가 없습니다", "code": "BAD_REQUEST"}
+            )
+        
+        if "acquisition_date" in update_data and update_data["acquisition_date"]:
+            update_data["acquisition_date"] = str(update_data["acquisition_date"])
+        
+        existing = supabase.table("certificates").select("id").eq("id", id).eq("user_id", x_user_id).execute()
+        
+        if not existing.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": "자격증을 찾을 수 없습니다", "code": "NOT_FOUND"}
+            )
+        
+        result = supabase.table("certificates").update(update_data).eq("id", id).execute()
+        return result.data[0]
+    
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
