@@ -251,7 +251,7 @@ export default function RoadmapPage() {
       }
       console.log('처리된 목표 배열:', goals);
       
-      if (goals.length > 0) {
+      if (goals && goals.length > 0) {
         const matchedJobs: JobPosting[] = [];
         const allTasks: DailyTask[] = [];
         
@@ -308,7 +308,7 @@ export default function RoadmapPage() {
             const seenTaskIds = new Set<string>();
             
             // 태스크를 DailyTask 형식으로 변환
-            tasks.forEach(task => {
+            (tasks || []).forEach(task => {
               const taskIdStr = String(task.id);
               
               // 이미 처리한 태스크는 스킵
@@ -602,7 +602,7 @@ export default function RoadmapPage() {
     if (selectAllTasks) {
       setSelectedTaskIds(new Set());
     } else {
-      setSelectedTaskIds(new Set(dailyTasks.map(t => t.id)));
+      setSelectedTaskIds(new Set((dailyTasks || []).map(t => t.id)));
     }
     setSelectAllTasks(!selectAllTasks);
   };
@@ -629,8 +629,8 @@ export default function RoadmapPage() {
       const idsToDelete = Array.from(selectedTaskIds);
       
       // UI에서 먼저 제거
-      setDailyTasks(prev => prev.filter(t => !selectedTaskIds.has(t.id)));
-      setCalendarTasks(prev => prev.filter(t => !selectedTaskIds.has(t.id)));
+      setDailyTasks(prev => (prev || []).filter(t => !selectedTaskIds.has(t.id)));
+      setCalendarTasks(prev => (prev || []).filter(t => !selectedTaskIds.has(t.id)));
       
       // 백엔드에서 삭제
       for (const taskId of idsToDelete) {
@@ -780,7 +780,7 @@ export default function RoadmapPage() {
 
   const getTasksForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return calendarTasks.filter(task => task.date === dateStr);
+    return (calendarTasks || []).filter(task => task.date === dateStr);
   };
 
   // 주간 뷰 관련 함수
@@ -805,7 +805,7 @@ export default function RoadmapPage() {
 
   const getTasksForWeekDate = (date: Date) => {
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return calendarTasks.filter(task => task.date === dateStr);
+    return (calendarTasks || []).filter(task => task.date === dateStr);
   };
 
   const handleAddTask = () => {
@@ -1025,7 +1025,7 @@ export default function RoadmapPage() {
                       {day && (
                         <>
                           <div className={`text-xs mb-1 ${dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-700'}`}>{day}</div>
-                          {tasks.map(task => (
+                          {(tasks || []).map(task => (
                             <div 
                               key={task.id}
                               className="text-[10px] bg-red-500 text-white rounded px-1 py-0.5 mb-0.5 truncate flex items-center justify-between group"
@@ -1152,7 +1152,7 @@ export default function RoadmapPage() {
                             })}
 
                             {/* 일반 일정 표시 */}
-                            {tasks.length === 0 && !weeklyRoutines.some(r => {
+                            {(!tasks || tasks.length === 0) && !weeklyRoutines.some(r => {
                               const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                               return r.completions[dateStr];
                             }) ? (
@@ -1160,7 +1160,7 @@ export default function RoadmapPage() {
                                 일정 없음
                               </div>
                             ) : (
-                              tasks.map(task => (
+                              (tasks || []).map(task => (
                                 <div
                                   key={task.id}
                                   className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
@@ -1192,7 +1192,7 @@ export default function RoadmapPage() {
           </div>
           <div className="bg-white rounded-lg shadow-sm mb-6">
             <div className="border-b px-4 py-3 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Task List ({dailyTasks.length})</h2>
+              <h2 className="text-lg font-bold">Task List ({(dailyTasks || []).length})</h2>
               <div className="flex items-center gap-2">
                 {selectedTaskIds.size > 0 && (
                   <button
@@ -1228,7 +1228,7 @@ export default function RoadmapPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dailyTasks.map(task => {
+                  {(dailyTasks || []).map(task => {
                     const isRequired = task.priority === 'required' || task.priority === '필수';
                     const isPreferred = task.priority === 'preferred' || task.priority === '우대';
                     

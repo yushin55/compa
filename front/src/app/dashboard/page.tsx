@@ -414,13 +414,22 @@ export default function DashboardPage() {
     );
   }
 
+  // radar_scores가 없을 경우 기본값 사용
+  const radarScores = data.radar_scores || {
+    education: 0,
+    certificate: 0,
+    language: 0,
+    project: 0,
+    activity: 0
+  };
+
   const categories = [
-    { name: '전공', score: data.radar_scores.education, key: 'education', color: 'from-blue-500 to-blue-600' },
-    { name: '자격증', score: data.radar_scores.certificate, key: 'certificate', color: 'from-purple-500 to-purple-600' },
-    { name: '어학', score: data.radar_scores.language, key: 'language', color: 'from-green-500 to-green-600' },
+    { name: '전공', score: radarScores.education || 0, key: 'education', color: 'from-blue-500 to-blue-600' },
+    { name: '자격증', score: radarScores.certificate || 0, key: 'certificate', color: 'from-purple-500 to-purple-600' },
+    { name: '어학', score: radarScores.language || 0, key: 'language', color: 'from-green-500 to-green-600' },
     { name: '공모전', score: 5.5, key: 'contest', color: 'from-yellow-500 to-yellow-600' }, // 임시 데이터
-    { name: '프로젝트', score: data.radar_scores.project, key: 'project', color: 'from-red-500 to-red-600' },
-    { name: '대외활동', score: data.radar_scores.activity, key: 'activity', color: 'from-pink-500 to-pink-600' },
+    { name: '프로젝트', score: radarScores.project || 0, key: 'project', color: 'from-red-500 to-red-600' },
+    { name: '대외활동', score: radarScores.activity || 0, key: 'activity', color: 'from-pink-500 to-pink-600' },
   ];
 
   // 6각형용 (대외활동 제외 - 처음 6개만)
@@ -1514,7 +1523,7 @@ export default function DashboardPage() {
               </div>
 
             {/* 프로젝트 카드 */}
-            {data.projects.length > 0 && (
+            {data.projects && data.projects.length > 0 && (
               <div className="bg-white border border-gray-300 rounded-lg p-4 hover:shadow-md transition-all">
                 <div
                 onClick={() => {
@@ -1640,7 +1649,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {data.projects.map((proj) => (
+                        {data.projects && data.projects.map((proj) => (
                           <div key={proj.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="flex justify-between items-start mb-1">
                               <h4 className="font-bold text-sm text-gray-900">{proj.project_name}</h4>
@@ -1669,7 +1678,7 @@ export default function DashboardPage() {
                           onClick={() => {
                             setEditingSection('project');
                             setEditFormData({
-                              projects: data.projects.map(proj => ({
+                              projects: (data.projects || []).map(proj => ({
                                 id: proj.id,
                                 project_name: proj.project_name,
                                 period: proj.period || '',
@@ -1691,7 +1700,7 @@ export default function DashboardPage() {
             )}
 
             {/* 대외활동 카드 */}
-            {data.activities.length > 0 && (
+            {data.activities && data.activities.length > 0 && (
               <div className="bg-white border border-gray-300 rounded-lg p-4 hover:shadow-md transition-all">
                 <div
                 onClick={() => {
@@ -1803,7 +1812,7 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {data.activities.map((act) => (
+                        {data.activities && data.activities.map((act) => (
                           <div key={act.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="flex justify-between items-start mb-1">
                               <h4 className="font-bold text-sm text-gray-900">{act.activity_name}</h4>
@@ -1823,7 +1832,7 @@ export default function DashboardPage() {
                           onClick={() => {
                             setEditingSection('activity');
                             setEditFormData({
-                              activities: data.activities.map(act => ({
+                              activities: (data.activities || []).map(act => ({
                                 id: act.id,
                                 activity_name: act.activity_name,
                                 activity_type: act.activity_type || '',

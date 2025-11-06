@@ -2,6 +2,10 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000';
 
+// 개발 모드: 백엔드 없이도 프론트엔드 개발을 위한 mock 모드
+// 환경변수 NEXT_PUBLIC_MOCK_API=true 설정하거나, 아래를 true로 변경하세요
+const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_API === 'true' || false;
+
 // localStorage에서 user_id 가져오기
 export const getUserId = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -38,14 +42,46 @@ const getHeaders = (): HeadersInit => {
   return headers;
 };
 
+// Mock API 응답 생성
+const mockApiResponse = async <T>(endpoint: string, method: string, body?: any): Promise<T> => {
+  console.log(`[MOCK API] ${method} ${endpoint}`, body);
+  
+  // 로그인
+  if (endpoint === '/auth/login' && method === 'POST') {
+    return {
+      message: '로그인 성공 (Mock)',
+      user_id: body.user_id || 'test_user',
+      onboarding_completed: false
+    } as T;
+  }
+  
+  // 회원가입
+  if (endpoint === '/auth/register' && method === 'POST') {
+    return {
+      message: '회원가입 성공 (Mock)',
+      user_id: body.user_id || 'test_user'
+    } as T;
+  }
+  
+  // 기본 응답
+  return {} as T;
+};
+
 // API 요청 wrapper
 export const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
+  const method = options.method || 'GET';
+  
+  // MOCK 모드: 백엔드 없이 프론트엔드 개발
+  if (MOCK_MODE) {
+    const body = options.body ? JSON.parse(options.body as string) : undefined;
+    return mockApiResponse<T>(endpoint, method, body);
+  }
+  
   const url = `${API_BASE_URL}${endpoint}`;
   const headers = getHeaders();
-  const method = options.method || 'GET';
   
   console.log(`[API Request] ${method} ${url}`);
   console.log('[API Headers]', headers);

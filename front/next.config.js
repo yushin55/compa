@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 프로덕션 빌드 최적화
-  output: 'standalone',
-  
   async rewrites() {
     // 개발 환경에서만 CORS 우회를 위한 프록시 설정
     if (process.env.NODE_ENV === 'development') {
@@ -22,6 +19,7 @@ const nextConfig = {
   // 이미지 최적화 (필요시)
   images: {
     domains: [],
+    unoptimized: true, // 개발 모드에서 이미지 최적화 오류 방지
   },
 };
 
