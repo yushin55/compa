@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 스펙 분석 - 스텝업(Step-Up)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .dashboard-content {
+            background: var(--bg-light);
+            min-height: calc(100vh - 60px);
+            padding: 3rem 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .chart-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+
+        .spec-list-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .spec-category {
+            margin-bottom: 2rem;
+        }
+
+        .spec-category:last-child {
+            margin-bottom: 0;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .category-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .spec-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .spec-item {
+            padding: 1rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .spec-item-content {
+            flex: 1;
+        }
+
+        .spec-item-title {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .spec-item-detail {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary-color), #357ABD);
+            border-radius: 12px;
+            color: white;
+        }
+
+        .cta-section h3 {
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="roadmap.html" class="logo">🎯 스텝업</a>
+            <ul class="nav-links">
+                <li><a href="roadmap.html">로드맵</a></li>
+                <li><a href="dashboard.html">내 스펙</a></li>
+                <li><a href="goal-setting.html">목표 설정</a></li>
+                <li><a href="#" onclick="logout(); return false;">로그아웃</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 페이지 헤더 -->
+    <div class="page-header">
+        <div class="container">
+            <h1>내 스펙 분석</h1>
+            <p>현재 나의 역량을 한눈에 확인하세요</p>
+        </div>
+    </div>
+
+    <!-- 메인 컨텐츠 -->
+    <div class="dashboard-content">
+        <div class="container">
+            <!-- 통계 카드 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">어학 성적</div>
+                    <div class="stat-value" id="languageCount">0</div>
+                    <div class="stat-label">개</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">자격증</div>
+                    <div class="stat-value" id="certCount">0</div>
+                    <div class="stat-label">개</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">프로젝트</div>
+                    <div class="stat-value" id="projectCount">0</div>
+                    <div class="stat-label">개</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">대외활동</div>
+                    <div class="stat-value" id="activityCount">0</div>
+                    <div class="stat-label">개</div>
+                </div>
+            </div>
+
+            <!-- 레이더 차트 -->
+            <div class="chart-section">
+                <h2 class="card-title">종합 스펙 분석</h2>
+                <div class="chart-container">
+                    <canvas id="radarChart" width="400" height="400"></canvas>
+                </div>
+            </div>
+
+            <!-- 스펙 상세 리스트 -->
+            <div class="spec-list-section">
+                <h2 class="card-title" style="margin-bottom: 2rem;">상세 스펙 정보</h2>
+
+                <!-- 학력 정보 -->
+                <div class="spec-category">
+                    <div class="category-header">
+                        <h3 class="category-title">📚 학력 정보</h3>
+                    </div>
+                    <div id="educationInfo"></div>
+                </div>
+
+                <!-- 어학 능력 -->
+                <div class="spec-category">
+                    <div class="category-header">
+                        <h3 class="category-title">🌐 어학 능력</h3>
+                    </div>
+                    <div class="spec-items" id="languageList"></div>
+                </div>
+
+                <!-- 자격증 -->
+                <div class="spec-category">
+                    <div class="category-header">
+                        <h3 class="category-title">🏆 자격증</h3>
+                    </div>
+                    <div class="spec-items" id="certificateList"></div>
+                </div>
+
+                <!-- 프로젝트 -->
+                <div class="spec-category">
+                    <div class="category-header">
+                        <h3 class="category-title">💼 프로젝트 경험</h3>
+                    </div>
+                    <div class="spec-items" id="projectList"></div>
+                </div>
+
+                <!-- 대외활동 -->
+                <div class="spec-category">
+                    <div class="category-header">
+                        <h3 class="category-title">🎯 대외활동</h3>
+                    </div>
+                    <div class="spec-items" id="activityList"></div>
+                </div>
+            </div>
+
+            <!-- CTA 섹션 -->
+            <div class="cta-section">
+                <h3>이제 목표를 설정해보세요!</h3>
+                <p>실제 채용 공고를 기반으로 당신만의 로드맵을 만들어보세요</p>
+                <a href="goal-setting.html" class="btn btn-secondary">목표 설정하기</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // 스펙 데이터 로드
+        const specData = StorageManager.getSpec();
+
+        if (!specData) {
+            // 스펙 데이터가 없으면 온보딩으로 리다이렉트
+            window.location.href = 'onboarding.html';
+        } else {
+            // 데이터 표시
+            displaySpec(specData);
+        }
+
+        function displaySpec(data) {
+            // 통계 업데이트
+            document.getElementById('languageCount').textContent = data.languages?.length || 0;
+            document.getElementById('certCount').textContent = data.certificates?.length || 0;
+            document.getElementById('projectCount').textContent = data.projects?.length || 0;
+            document.getElementById('activityCount').textContent = data.activities?.length || 0;
+
+            // 학력 정보
+            if (data.education) {
+                const edu = data.education;
+                const graduationText = {
+                    'graduated': '졸업',
+                    'expected': '졸업 예정',
+                    'enrolled': '재학 중'
+                };
+                
+                document.getElementById('educationInfo').innerHTML = `
+                    <div class="spec-item">
+                        <div class="spec-item-content">
+                            <div class="spec-item-title">${edu.school} - ${edu.major}</div>
+                            <div class="spec-item-detail">학점: ${edu.gpa} | ${graduationText[edu.graduation]}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 어학 능력
+            const languageList = document.getElementById('languageList');
+            if (data.languages && data.languages.length > 0) {
+                languageList.innerHTML = data.languages.map(item => `
+                    <div class="spec-item">
+                        <div class="spec-item-content">
+                            <div class="spec-item-title">${item.type} ${item.score}점</div>
+                            <div class="spec-item-detail">취득일: ${item.date}</div>
+                        </div>
+                        <span class="badge badge-success">보유</span>
+                    </div>
+                `).join('');
+            } else {
+                languageList.innerHTML = '<div class="empty-state"><p>등록된 어학 성적이 없습니다</p></div>';
+            }
+
+            // 자격증
+            const certList = document.getElementById('certificateList');
+            if (data.certificates && data.certificates.length > 0) {
+                certList.innerHTML = data.certificates.map(item => `
+                    <div class="spec-item">
+                        <div class="spec-item-content">
+                            <div class="spec-item-title">${item.name}</div>
+                            <div class="spec-item-detail">취득일: ${item.date}</div>
+                        </div>
+                        <span class="badge badge-success">보유</span>
+                    </div>
+                `).join('');
+            } else {
+                certList.innerHTML = '<div class="empty-state"><p>등록된 자격증이 없습니다</p></div>';
+            }
+
+            // 프로젝트
+            const projectList = document.getElementById('projectList');
+            if (data.projects && data.projects.length > 0) {
+                projectList.innerHTML = data.projects.map(item => `
+                    <div class="spec-item">
+                        <div class="spec-item-content">
+                            <div class="spec-item-title">${item.name}</div>
+                            <div class="spec-item-detail">${item.role} | ${item.period}</div>
+                        </div>
+                        <span class="badge badge-info">완료</span>
+                    </div>
+                `).join('');
+            } else {
+                projectList.innerHTML = '<div class="empty-state"><p>등록된 프로젝트가 없습니다</p></div>';
+            }
+
+            // 대외활동
+            const activityList = document.getElementById('activityList');
+            if (data.activities && data.activities.length > 0) {
+                activityList.innerHTML = data.activities.map(item => `
+                    <div class="spec-item">
+                        <div class="spec-item-content">
+                            <div class="spec-item-title">${item.name}</div>
+                            <div class="spec-item-detail">${item.type} | ${item.period}</div>
+                        </div>
+                        <span class="badge badge-info">완료</span>
+                    </div>
+                `).join('');
+            } else {
+                activityList.innerHTML = '<div class="empty-state"><p>등록된 대외활동이 없습니다</p></div>';
+            }
+
+            // 레이더 차트 그리기
+            const chartData = {
+                labels: ['학력', '어학', '자격증', '프로젝트', '대외활동'],
+                values: [
+                    calculateScore('education', data),
+                    calculateScore('language', data),
+                    calculateScore('certificate', data),
+                    calculateScore('project', data),
+                    calculateScore('activity', data)
+                ]
+            };
+            
+            drawRadarChart('radarChart', chartData);
+        }
+
+        function calculateScore(category, data) {
+            // 간단한 점수 계산 로직 (실제로는 더 복잡한 알고리즘 사용)
+            switch(category) {
+                case 'education':
+                    return data.education ? 80 : 0;
+                case 'language':
+                    return Math.min((data.languages?.length || 0) * 40, 100);
+                case 'certificate':
+                    return Math.min((data.certificates?.length || 0) * 30, 100);
+                case 'project':
+                    return Math.min((data.projects?.length || 0) * 35, 100);
+                case 'activity':
+                    return Math.min((data.activities?.length || 0) * 25, 100);
+                default:
+                    return 0;
+            }
+        }
+    </script>
+</body>
+</html>

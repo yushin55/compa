@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>목표 설정 - 스텝업(Step-Up)</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .goal-setting-content {
+            background: var(--bg-light);
+            min-height: calc(100vh - 60px);
+            padding: 3rem 0;
+        }
+
+        .search-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-box input {
+            flex: 1;
+        }
+
+        .job-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .job-card {
+            background: var(--bg-light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .job-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .job-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .job-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .company-name {
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .job-meta {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .job-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .job-requirements {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .requirement-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .requirement-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .requirement-list li {
+            padding: 0.25rem 0;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .requirement-list li::before {
+            content: "• ";
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .analysis-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .comparison-column h3 {
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .comparison-item {
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            background: var(--bg-light);
+        }
+
+        .comparison-item.match {
+            background: #D4EDDA;
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .comparison-item.partial {
+            background: #FFF3CD;
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .comparison-item.missing {
+            background: #F8D7DA;
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .status-icon {
+            margin-right: 0.5rem;
+        }
+
+        .task-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .task-list {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .task-card {
+            background: var(--bg-light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-info {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .task-description {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .task-priority {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .priority-high {
+            background: #F8D7DA;
+            color: #721C24;
+        }
+
+        .priority-medium {
+            background: #FFF3CD;
+            color: #856404;
+        }
+
+        .priority-low {
+            background: #D1ECF1;
+            color: #0C5460;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 네비게이션 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="roadmap.html" class="logo">🎯 스텝업</a>
+            <ul class="nav-links">
+                <li><a href="roadmap.html">로드맵</a></li>
+                <li><a href="dashboard.html">내 스펙</a></li>
+                <li><a href="goal-setting.html">목표 설정</a></li>
+                <li><a href="#" onclick="logout(); return false;">로그아웃</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- 페이지 헤더 -->
+    <div class="page-header">
+        <div class="container">
+            <h1>목표 설정</h1>
+            <p>원하는 채용 공고를 선택하고 맞춤형 로드맵을 만드세요</p>
+        </div>
+    </div>
+
+    <!-- 메인 컨텐츠 -->
+    <div class="goal-setting-content">
+        <div class="container">
+            <!-- 채용 공고 검색 -->
+            <div class="search-section">
+                <h2 class="card-title">채용 공고 검색</h2>
+                <div class="search-box">
+                    <input type="text" id="searchKeyword" class="form-control" placeholder="회사명 또는 직무를 입력하세요 (예: 네이버, 프론트엔드)">
+                    <button class="btn btn-primary" onclick="searchJobs()">검색</button>
+                </div>
+
+                <div class="job-list" id="jobList">
+                    <!-- 샘플 채용 공고들 -->
+                </div>
+            </div>
+
+            <!-- 스펙 비교 분석 (선택된 경우에만 표시) -->
+            <div id="analysisSection" class="hidden">
+                <div class="analysis-section">
+                    <h2 class="card-title">스펙 비교 분석</h2>
+                    <p style="color: var(--text-light); margin-bottom: 2rem;">
+                        선택한 공고의 요구사항과 현재 스펙을 비교한 결과입니다.
+                    </p>
+                    
+                    <div class="comparison-grid">
+                        <div class="comparison-column">
+                            <h3>📋 필요한 스펙</h3>
+                            <div id="requiredSpecs"></div>
+                        </div>
+                        <div class="comparison-column">
+                            <h3>✅ 내 현재 스펙</h3>
+                            <div id="mySpecs"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 추천 업무 -->
+                <div class="task-section">
+                    <h2 class="card-title">추천 업무 (To-Do List)</h2>
+                    <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+                        부족한 스펙을 채우기 위한 구체적인 업무 목록입니다.
+                    </p>
+                    <div class="task-list" id="taskList"></div>
+                    
+                    <div class="text-center mt-2">
+                        <button class="btn btn-secondary" onclick="confirmGoal()">이 목표로 시작하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // 샘플 채용 공고 데이터
+        const sampleJobs = [
+            {
+                id: 1,
+                title: '신입 프론트엔드 개발자',
+                company: '네이버',
+                location: '경기 성남시',
+                deadline: '2025-11-30',
+                experience: '신입',
+                requirements: [
+                    'HTML, CSS, JavaScript 기본 이해',
+                    'React 또는 Vue.js 프레임워크 경험',
+                    '웹 접근성 및 성능 최적화에 대한 이해',
+                    'Git을 활용한 협업 경험'
+                ],
+                preferred: [
+                    'TypeScript 사용 경험',
+                    '오픈소스 프로젝트 기여 경험',
+                    'TOEIC 800점 이상',
+                    '컴퓨터 관련 학위'
+                ]
+            },
+            {
+                id: 2,
+                title: '주니어 마케터',
+                company: '카카오',
+                location: '제주도',
+                deadline: '2025-12-15',
+                experience: '경력 1년',
+                requirements: [
+                    '디지털 마케팅 기본 이해',
+                    'SNS 채널 운영 경험',
+                    '데이터 분석 능력',
+                    '마케팅 관련 자격증 보유'
+                ],
+                preferred: [
+                    'GAIQ 자격증',
+                    '광고 캠페인 기획 경험',
+                    '영어 또는 중국어 가능자',
+                    'Adobe Creative Suite 활용 가능'
+                ]
+            },
+            {
+                id: 3,
+                title: '신입 백엔드 개발자',
+                company: '쿠팡',
+                location: '서울 송파구',
+                deadline: '2025-11-20',
+                experience: '신입·경력',
+                requirements: [
+                    'Java, Python 등 하나 이상의 프로그래밍 언어 능숙',
+                    'RESTful API 설계 및 개발 경험',
+                    '데이터베이스(MySQL, MongoDB 등) 이해',
+                    '정보처리기사 자격증'
+                ],
+                preferred: [
+                    'Spring Boot 또는 Django 프레임워크 경험',
+                    'AWS, GCP 등 클라우드 서비스 경험',
+                    '대용량 트래픽 처리 경험',
+                    '컴퓨터공학 전공'
+                ]
+            }
+        ];
+
+        let selectedJob = null;
+        const userSpec = StorageManager.getSpec();
+
+        // 페이지 로드 시 샘플 공고 표시
+        displayJobs(sampleJobs);
+
+        function displayJobs(jobs) {
+            const jobList = document.getElementById('jobList');
+            jobList.innerHTML = jobs.map(job => `
+                <div class="job-card" onclick="selectJob(${job.id})">
+                    <div class="job-header">
+                        <div>
+                            <div class="company-name">${job.company}</div>
+                            <div class="job-title">${job.title}</div>
+                        </div>
+                        <span class="badge badge-info">${job.experience}</span>
+                    </div>
+                    <div class="job-meta">
+                        <div class="job-meta-item">📍 ${job.location}</div>
+                        <div class="job-meta-item">📅 마감: ${job.deadline}</div>
+                    </div>
+                    <div class="job-requirements">
+                        <div class="requirement-title">자격요건</div>
+                        <ul class="requirement-list">
+                            ${job.requirements.slice(0, 3).map(req => `<li>${req}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchJobs() {
+            const keyword = document.getElementById('searchKeyword').value.toLowerCase();
+            if (!keyword) {
+                displayJobs(sampleJobs);
+                return;
+            }
+
+            const filtered = sampleJobs.filter(job => 
+                job.title.toLowerCase().includes(keyword) ||
+                job.company.toLowerCase().includes(keyword)
+            );
+
+            if (filtered.length === 0) {
+                document.getElementById('jobList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <p>검색 결과가 없습니다</p>
+                    </div>
+                `;
+            } else {
+                displayJobs(filtered);
+            }
+        }
+
+        function selectJob(jobId) {
+            selectedJob = sampleJobs.find(j => j.id === jobId);
+            
+            // 카드 선택 표시
+            document.querySelectorAll('.job-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+
+            // 분석 섹션 표시
+            document.getElementById('analysisSection').classList.remove('hidden');
+            
+            // 스펙 비교 분석
+            analyzeSpecs(selectedJob);
+            
+            // 스크롤 이동
+            setTimeout(() => {
+                document.getElementById('analysisSection').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+
+        function analyzeSpecs(job) {
+            const allRequirements = [...job.requirements, ...job.preferred];
+            
+            // 필요 스펙 표시
+            const requiredSpecs = document.getElementById('requiredSpecs');
+            requiredSpecs.innerHTML = allRequirements.map(req => {
+                const status = checkRequirement(req);
+                return `
+                    <div class="comparison-item ${status.class}">
+                        <span class="status-icon">${status.icon}</span>
+                        ${req}
+                    </div>
+                `;
+            }).join('');
+
+            // 내 스펙 표시
+            const mySpecs = document.getElementById('mySpecs');
+            const mySpecsList = [];
+            
+            if (userSpec?.education) {
+                mySpecsList.push(`${userSpec.education.school} ${userSpec.education.major} (${userSpec.education.gpa})`);
+            }
+            
+            userSpec?.languages?.forEach(lang => {
+                mySpecsList.push(`${lang.type} ${lang.score}점`);
+            });
+            
+            userSpec?.certificates?.forEach(cert => {
+                mySpecsList.push(cert.name);
+            });
+            
+            userSpec?.projects?.forEach(proj => {
+                mySpecsList.push(`프로젝트: ${proj.name}`);
+            });
+
+            mySpecs.innerHTML = mySpecsList.length > 0 
+                ? mySpecsList.map(spec => `
+                    <div class="comparison-item match">
+                        <span class="status-icon">✅</span>
+                        ${spec}
+                    </div>
+                `).join('')
+                : '<div class="empty-state"><p>등록된 스펙이 없습니다</p></div>';
+
+            // 추천 업무 생성
+            generateTasks(job);
+        }
+
+        function checkRequirement(requirement) {
+            const req = requirement.toLowerCase();
+            
+            // 간단한 매칭 로직 (실제로는 더 정교한 분석 필요)
+            if (req.includes('toeic')) {
+                const hasLanguage = userSpec?.languages?.some(l => l.type.toLowerCase().includes('toeic'));
+                return hasLanguage 
+                    ? { class: 'match', icon: '✅' }
+                    : { class: 'missing', icon: '❌' };
+            }
+            
+            if (req.includes('자격증') || req.includes('정보처리기사') || req.includes('gaiq')) {
+                const hasCert = userSpec?.certificates?.length > 0;
+                return hasCert
+                    ? { class: 'partial', icon: '⚠️' }
+                    : { class: 'missing', icon: '❌' };
+            }
+            
+            if (req.includes('프로젝트') || req.includes('경험')) {
+                const hasProject = userSpec?.projects?.length > 0;
+                return hasProject
+                    ? { class: 'match', icon: '✅' }
+                    : { class: 'missing', icon: '❌' };
+            }
+            
+            return { class: 'partial', icon: '⚠️' };
+        }
+
+        function generateTasks(job) {
+            const tasks = [
+                {
+                    title: '이력서 및 포트폴리오 업데이트',
+                    description: '최신 프로젝트와 경험을 반영하여 이력서 수정',
+                    priority: 'high'
+                },
+                {
+                    title: '기술 역량 강화',
+                    description: job.requirements[0] + ' 관련 학습 및 실습',
+                    priority: 'high'
+                },
+                {
+                    title: '자격증 취득',
+                    description: '필요 자격증 학습 및 시험 준비',
+                    priority: 'medium'
+                },
+                {
+                    title: '프로젝트 경험 쌓기',
+                    description: '포트폴리오에 추가할 수 있는 개인 프로젝트 진행',
+                    priority: 'medium'
+                },
+                {
+                    title: '어학 점수 향상',
+                    description: '목표 점수 달성을 위한 학습 계획 수립 및 실행',
+                    priority: 'low'
+                }
+            ];
+
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = tasks.map(task => `
+                <div class="task-card">
+                    <div class="task-info">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-description">${task.description}</div>
+                    </div>
+                    <div class="task-priority priority-${task.priority}">
+                        ${task.priority === 'high' ? '높음' : task.priority === 'medium' ? '보통' : '낮음'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function confirmGoal() {
+            if (!selectedJob) {
+                alert('먼저 채용 공고를 선택해주세요.');
+                return;
+            }
+
+            // 목표 저장
+            const goalData = {
+                job: selectedJob,
+                setDate: new Date().toISOString(),
+                tasks: [
+                    { id: 1, title: '이력서 및 포트폴리오 업데이트', completed: false, dueDate: '2025-11-01' },
+                    { id: 2, title: '기술 역량 강화', completed: false, dueDate: '2025-11-10' },
+                    { id: 3, title: '자격증 취득', completed: false, dueDate: '2025-11-15' },
+                    { id: 4, title: '프로젝트 경험 쌓기', completed: false, dueDate: '2025-11-20' },
+                    { id: 5, title: '어학 점수 향상', completed: false, dueDate: '2025-11-25' }
+                ]
+            };
+
+            StorageManager.saveGoal(goalData);
+            StorageManager.saveTasks(goalData.tasks);
+
+            alert('목표가 설정되었습니다! 로드맵 페이지에서 진행 상황을 관리하세요.');
+            window.location.href = 'roadmap.html';
+        }
+    </script>
+</body>
+</html>

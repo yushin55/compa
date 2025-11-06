@@ -3,8 +3,8 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load .env from backend directory
-backend_dir = Path(__file__).resolve().parent / 'backend'
+# Load .env from backend directory (absolute path)
+backend_dir = Path(__file__).resolve().parent.parent
 env_path = backend_dir / '.env'
 
 # Try to load from .env
