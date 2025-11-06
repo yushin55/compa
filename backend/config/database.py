@@ -15,6 +15,6 @@ if env_path.exists():
 SUPABASE_URL = os.getenv("SUPABASE_URL") or "https://xyrbiuogwtmcjwqkojrb.supabase.co"
 SUPABASE_KEY = os.getenv("SUPABASE_KEY") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5cmJpdW9nd3RtY2p3cWtvanJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxOTA5NDUsImV4cCI6MjA3NDc2Njk0NX0.AFau_18T-iVIc9gIGoTbvOhq42H8VDfpJ0rKvmHfAHA"
 
-print(f"✅ [Database] Supabase URL loaded: {SUPABASE_URL[:50]}...")
+print(f"[Database] Supabase URL loaded: {SUPABASE_URL[:50]}...")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-print(f"✅ [Database] Supabase client initialized successfully")
+print(f"[Database] Supabase client initialized successfully")
