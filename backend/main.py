@@ -1,6 +1,10 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, users, specs, goals, tasks, job_postings, progress, stats, experiences, routines
+from routers import (
+    auth, users, specs, goals, tasks, job_postings, progress, stats, 
+    experiences, routines, dashboard, templates, tags, export, ai
+)
 
 app = FastAPI(
     title="스텝업(Step-Up) API",
@@ -22,9 +26,13 @@ app = FastAPI(
     }
 )
 
+# CORS 설정 (환경 변수로 관리)
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+print(f"🌐 CORS allowed origins: {CORS_ORIGINS}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,  # 환경 변수로 관리
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +48,11 @@ app.include_router(progress.router)
 app.include_router(stats.router)
 app.include_router(experiences.router)
 app.include_router(routines.router)
+app.include_router(dashboard.router)
+app.include_router(templates.router)
+app.include_router(tags.router)
+app.include_router(export.router)
+app.include_router(ai.router)
 
 
 @app.get("/")

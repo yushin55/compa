@@ -1,0 +1,43 @@
+name: Deploy to Cloudtype
+on:
+  push:
+    branches:
+      - back
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Connect deploy key
+        uses: cloudtype-github-actions/connect@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          ghtoken: ${{ secrets.GHP_TOKEN }}
+      - name: Deploy
+        uses: cloudtype-github-actions/deploy@v1
+        with:
+          token: ${{ secrets.CLOUDTYPE_TOKEN }}
+          project: gudrbs14/conpanion
+          stage: main
+          yaml: >
+            name: stepup-api
+
+            app: python@3.11
+
+            options:
+              ports: 8000
+              start: uvicorn main:app --host 0.0.0.0 --port $PORT
+              env:
+                - name: SUPABASE_URL
+                  value: https://xyrbiuogwtmcjwqkojrb.supabase.co
+                - name: SUPABASE_KEY
+                  value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5cmJpdW9nd3RtY2p3cWtvanJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxOTA5NDUsImV4cCI6MjA3NDc2Njk0NX0.AFau_18T-iVIc9gIGoTbvOhq42H8VDfpJ0rKvmHfAHA
+                - name: CORS_ORIGINS
+                  value: "*"
+              buildenv: []
+              install: pip install -r requirements.txt
+            context:
+              git:
+                url: git@github.com:${{ github.repository }}.git
+                ref: ${{ github.ref }}

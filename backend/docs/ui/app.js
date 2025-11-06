@@ -1,5 +1,70 @@
 // 스텝업(Step-Up) 공통 JavaScript
 
+// ⚙️ API 설정
+const API_CONFIG = {
+    // Cloudtype 배포 URL로 변경하세요!
+    // 예: 'https://port-0-conpanion-back-xxxxxx.cloudtype.app'
+    BASE_URL: 'http://localhost:8000', // 로컬 개발용
+    // BASE_URL: 'https://your-app.cloudtype.app', // 배포용 (주석 해제 후 사용)
+    
+    // 현재 사용자 ID (데모용)
+    getCurrentUserId: function() {
+        return localStorage.getItem('userId') || 'demo-user';
+    },
+    
+    // API 요청 헬퍼
+    async fetch(endpoint, options = {}) {
+        const url = `${this.BASE_URL}${endpoint}`;
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-user-id': this.getCurrentUserId(),
+            ...options.headers
+        };
+        
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('API 요청 실패:', error);
+            throw error;
+        }
+    },
+    
+    // GET 요청
+    async get(endpoint) {
+        return this.fetch(endpoint, { method: 'GET' });
+    },
+    
+    // POST 요청
+    async post(endpoint, data) {
+        return this.fetch(endpoint, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    },
+    
+    // PUT 요청
+    async put(endpoint, data) {
+        return this.fetch(endpoint, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+        });
+    },
+    
+    // DELETE 요청
+    async delete(endpoint) {
+        return this.fetch(endpoint, { method: 'DELETE' });
+    }
+};
+
 // 네비게이션 활성화
 document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;

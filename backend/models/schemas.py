@@ -74,6 +74,12 @@ class LanguageCreate(BaseModel):
     acquisition_date: Optional[date] = None
 
 
+class LanguageUpdate(BaseModel):
+    language_type: Optional[str] = None
+    score: Optional[str] = None
+    acquisition_date: Optional[date] = None
+
+
 class Certificate(BaseModel):
     id: int
     user_id: str
@@ -85,6 +91,11 @@ class Certificate(BaseModel):
 
 class CertificateCreate(BaseModel):
     certificate_name: str
+    acquisition_date: Optional[date] = None
+
+
+class CertificateUpdate(BaseModel):
+    certificate_name: Optional[str] = None
     acquisition_date: Optional[date] = None
 
 
@@ -403,3 +414,202 @@ class WeeklyStatsResponse(BaseModel):
     week_end: str
     routines: List[RoutineStats]
     summary: WeeklyStatsSummary
+
+
+# ============ Dashboard Models ============
+class RecentActivity(BaseModel):
+    id: str
+    type: str  # task_completed, reflection_added, routine_completed
+    title: str
+    date: datetime
+
+
+class UpcomingDeadline(BaseModel):
+    task_id: int
+    title: str
+    due_date: date
+    days_left: int
+
+
+class WeeklyProgress(BaseModel):
+    routines_completed: int
+    routines_total: int
+    completion_rate: float
+
+
+class DashboardStats(BaseModel):
+    total_experiences: int
+    completed_tasks: int
+    active_roadmaps: int
+    total_tags: int
+    recent_activities: List[RecentActivity]
+    upcoming_deadlines: List[UpcomingDeadline]
+    weekly_progress: WeeklyProgress
+
+
+# ============ Template Models ============
+class TemplateTaskItem(BaseModel):
+    title: str
+    category: str
+    duration: str
+    priority: str = Field(pattern="^(required|preferred)$")
+    order: int
+
+
+class TemplateRoutineItem(BaseModel):
+    title: str
+    category: str
+    frequency: int = Field(ge=1, le=7)
+    color: str
+    order: int
+
+
+class TemplateCreate(BaseModel):
+    title: str
+    category: str
+    duration: str
+    difficulty: str = Field(pattern="^(beginner|intermediate|advanced)$")
+    description: str
+    tasks: List[TemplateTaskItem]
+    routines: List[TemplateRoutineItem]
+
+
+class Template(BaseModel):
+    id: int
+    title: str
+    category: str
+    duration: str
+    difficulty: str
+    description: str
+    tasks: List[TemplateTaskItem]
+    routines: List[TemplateRoutineItem]
+    created_at: datetime
+
+
+class TemplateListItem(BaseModel):
+    id: int
+    title: str
+    category: str
+    duration: str
+    difficulty: str
+    description: str
+    created_at: datetime
+
+
+class RoadmapFromTemplateRequest(BaseModel):
+    template_id: int
+    start_date: date
+    customizations: Optional[dict] = None
+
+
+# ============ Tag Models ============
+class TagWithCount(BaseModel):
+    name: str
+    count: int
+    category: Optional[str] = None
+
+
+class TagExperience(BaseModel):
+    id: int
+    title: str
+    date_range: str
+    category: str
+
+
+# ============ Export Models ============
+class ExportRequest(BaseModel):
+    include_experiences: bool = True
+    include_tasks: bool = True
+    include_routines: bool = True
+    date_range: Optional[dict] = None
+
+
+class ExportData(BaseModel):
+    exported_at: datetime
+    user: dict
+    data: dict
+
+
+# ============ AI Models ============
+class ReflectionRequest(BaseModel):
+    experience_id: Optional[int] = None
+    reflection: dict
+
+
+class GrowthArea(BaseModel):
+    area: str
+    progress: str
+    evidence: str
+
+
+class Recommendation(BaseModel):
+    priority: str
+    action: str
+    reason: str
+
+
+class ReflectionQuality(BaseModel):
+    score: int
+    strengths: List[str]
+    improvements: List[str]
+
+
+class NextSteps(BaseModel):
+    immediate: str
+    short_term: str
+    long_term: str
+
+
+class AIInsights(BaseModel):
+    summary: str
+    growth_areas: List[GrowthArea]
+    patterns: List[str]
+    recommendations: List[Recommendation]
+    reflection_quality: ReflectionQuality
+    next_steps: NextSteps
+    generated_at: datetime
+
+
+class LearningPathRequest(BaseModel):
+    current_skills: dict
+    target_role: str
+    timeline: str
+    focus_areas: List[str]
+
+
+class PhaseItem(BaseModel):
+    phase: int
+    title: str
+    duration: str
+    topics: List[str]
+    projects: List[str]
+
+
+class WeeklyRoutineItem(BaseModel):
+    activity: str
+    frequency: int
+    reason: str
+
+
+class Milestone(BaseModel):
+    month: int
+    goal: str
+    metrics: List[str]
+
+
+class LearningPath(BaseModel):
+    phases: List[PhaseItem]
+    weekly_routines: List[WeeklyRoutineItem]
+    milestones: List[Milestone]
+
+
+class AIQuestion(BaseModel):
+    question: str
+    purpose: str
+    tags: List[str]
+
+
+class ReflectionQuestions(BaseModel):
+    ai_question1: AIQuestion
+    ai_question2: AIQuestion
+    ai_question3: AIQuestion
